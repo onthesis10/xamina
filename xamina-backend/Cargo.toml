@@ -1,0 +1,20 @@
+[workspace]
+members = [
+    "crates/api",
+    "crates/core",
+]
+
+[workspace.dependencies]
+axum = "0.7"
+tokio = { version = "1", features = ["full"] }
+sqlx = { version = "0.7", features = ["postgres"] }
+serde = { version = "1.0", features = ["derive"] }
+jsonwebtoken = "9"
+argon2 = "0.5"
+redis = "0.24"
+async-openai = "0.20"
+validator = "0.18"
+lettre = "0.11"
+tracing = "0.1"
+anyhow = "1.0"
+uuid = { version = "1", features = ["v4"] }

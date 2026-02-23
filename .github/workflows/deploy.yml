@@ -1,0 +1,49 @@
+name: Xamina CI/CD
+on:
+  push:
+    branches: [main, develop]
+
+jobs:
+  test-backend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Cache Cargo
+        uses: Swatinem/rust-cache@v2
+      - run: cargo test --all
+      - run: cargo clippy -- -D warnings
+      - run: cargo fmt --check
+
+  test-frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '20' }
+      - run: npm ci
+        working-directory: xamina-frontend
+      - run: npm run type-check && npm test
+
+  deploy:
+    needs: [test-backend, test-frontend]
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Build & Push Docker images
+        run: |
+          docker build -t xamina-api ./xamina-backend
+          docker build -t xamina-fe ./xamina-frontend
+          docker push ghcr.io/...
+
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: deploy
+          key: ${{ secrets.SSH_KEY }}
+          script: |
+            cd /opt/xamina
+            docker-compose pull
+            docker-compose up -d --no-deps api frontend
+            docker-compose exec api sqlx migrate run
