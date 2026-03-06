@@ -1,0 +1,84 @@
+# TYPE axum_http_requests_total counter
+axum_http_requests_total{method="POST",status="200",endpoint="/api/v1/ai/generate"} 21
+axum_http_requests_total{method="POST",status="200",endpoint="/api/v1/auth/login"} 2
+axum_http_requests_total{method="POST",status="429",endpoint="/api/v1/ai/generate"} 76
+axum_http_requests_total{method="GET",status="200",endpoint="/health"} 1
+
+# TYPE axum_http_requests_pending gauge
+axum_http_requests_pending{method="GET",endpoint="/health"} 0
+axum_http_requests_pending{method="POST",endpoint="/api/v1/ai/generate"} 0
+axum_http_requests_pending{method="POST",endpoint="/api/v1/auth/login"} 0
+axum_http_requests_pending{method="GET",endpoint="/metrics"} 1
+
+# TYPE axum_http_requests_duration_seconds histogram
+axum_http_requests_duration_seconds_bucket{method="GET",status="200",endpoint="/health",le="0.005"} 0
+axum_http_requests_duration_seconds_bucket{method="GET",status="200",endpoint="/health",le="0.01"} 1
+axum_http_requests_duration_seconds_bucket{method="GET",status="200",endpoint="/health",le="0.025"} 1
+axum_http_requests_duration_seconds_bucket{method="GET",status="200",endpoint="/health",le="0.05"} 1
+axum_http_requests_duration_seconds_bucket{method="GET",status="200",endpoint="/health",le="0.1"} 1
+axum_http_requests_duration_seconds_bucket{method="GET",status="200",endpoint="/health",le="0.25"} 1
+axum_http_requests_duration_seconds_bucket{method="GET",status="200",endpoint="/health",le="0.5"} 1
+axum_http_requests_duration_seconds_bucket{method="GET",status="200",endpoint="/health",le="1"} 1
+axum_http_requests_duration_seconds_bucket{method="GET",status="200",endpoint="/health",le="2.5"} 1
+axum_http_requests_duration_seconds_bucket{method="GET",status="200",endpoint="/health",le="5"} 1
+axum_http_requests_duration_seconds_bucket{method="GET",status="200",endpoint="/health",le="10"} 1
+axum_http_requests_duration_seconds_bucket{method="GET",status="200",endpoint="/health",le="+Inf"} 1
+axum_http_requests_duration_seconds_sum{method="GET",status="200",endpoint="/health"} 0.0071939
+axum_http_requests_duration_seconds_count{method="GET",status="200",endpoint="/health"} 1
+axum_http_requests_duration_seconds_bucket{method="POST",status="200",endpoint="/api/v1/ai/generate",le="0.005"} 0
+axum_http_requests_duration_seconds_bucket{method="POST",status="200",endpoint="/api/v1/ai/generate",le="0.01"} 0
+axum_http_requests_duration_seconds_bucket{method="POST",status="200",endpoint="/api/v1/ai/generate",le="0.025"} 1
+axum_http_requests_duration_seconds_bucket{method="POST",status="200",endpoint="/api/v1/ai/generate",le="0.05"} 17
+axum_http_requests_duration_seconds_bucket{method="POST",status="200",endpoint="/api/v1/ai/generate",le="0.1"} 20
+axum_http_requests_duration_seconds_bucket{method="POST",status="200",endpoint="/api/v1/ai/generate",le="0.25"} 21
+axum_http_requests_duration_seconds_bucket{method="POST",status="200",endpoint="/api/v1/ai/generate",le="0.5"} 21
+axum_http_requests_duration_seconds_bucket{method="POST",status="200",endpoint="/api/v1/ai/generate",le="1"} 21
+axum_http_requests_duration_seconds_bucket{method="POST",status="200",endpoint="/api/v1/ai/generate",le="2.5"} 21
+axum_http_requests_duration_seconds_bucket{method="POST",status="200",endpoint="/api/v1/ai/generate",le="5"} 21
+axum_http_requests_duration_seconds_bucket{method="POST",status="200",endpoint="/api/v1/ai/generate",le="10"} 21
+axum_http_requests_duration_seconds_bucket{method="POST",status="200",endpoint="/api/v1/ai/generate",le="+Inf"} 21
+axum_http_requests_duration_seconds_sum{method="POST",status="200",endpoint="/api/v1/ai/generate"} 0.8949094
+axum_http_requests_duration_seconds_count{method="POST",status="200",endpoint="/api/v1/ai/generate"} 21
+axum_http_requests_duration_seconds_bucket{method="POST",status="200",endpoint="/api/v1/auth/login",le="0.005"} 0
+axum_http_requests_duration_seconds_bucket{method="POST",status="200",endpoint="/api/v1/auth/login",le="0.01"} 0
+axum_http_requests_duration_seconds_bucket{method="POST",status="200",endpoint="/api/v1/auth/login",le="0.025"} 1
+axum_http_requests_duration_seconds_bucket{method="POST",status="200",endpoint="/api/v1/auth/login",le="0.05"} 1
+axum_http_requests_duration_seconds_bucket{method="POST",status="200",endpoint="/api/v1/auth/login",le="0.1"} 1
+axum_http_requests_duration_seconds_bucket{method="POST",status="200",endpoint="/api/v1/auth/login",le="0.25"} 2
+axum_http_requests_duration_seconds_bucket{method="POST",status="200",endpoint="/api/v1/auth/login",le="0.5"} 2
+axum_http_requests_duration_seconds_bucket{method="POST",status="200",endpoint="/api/v1/auth/login",le="1"} 2
+axum_http_requests_duration_seconds_bucket{method="POST",status="200",endpoint="/api/v1/auth/login",le="2.5"} 2
+axum_http_requests_duration_seconds_bucket{method="POST",status="200",endpoint="/api/v1/auth/login",le="5"} 2
+axum_http_requests_duration_seconds_bucket{method="POST",status="200",endpoint="/api/v1/auth/login",le="10"} 2
+axum_http_requests_duration_seconds_bucket{method="POST",status="200",endpoint="/api/v1/auth/login",le="+Inf"} 2
+axum_http_requests_duration_seconds_sum{method="POST",status="200",endpoint="/api/v1/auth/login"} 0.2580329
+axum_http_requests_duration_seconds_count{method="POST",status="200",endpoint="/api/v1/auth/login"} 2
+axum_http_requests_duration_seconds_bucket{method="POST",status="429",endpoint="/api/v1/ai/generate",le="0.005"} 0
+axum_http_requests_duration_seconds_bucket{method="POST",status="429",endpoint="/api/v1/ai/generate",le="0.01"} 0
+axum_http_requests_duration_seconds_bucket{method="POST",status="429",endpoint="/api/v1/ai/generate",le="0.025"} 68
+axum_http_requests_duration_seconds_bucket{method="POST",status="429",endpoint="/api/v1/ai/generate",le="0.05"} 75
+axum_http_requests_duration_seconds_bucket{method="POST",status="429",endpoint="/api/v1/ai/generate",le="0.1"} 76
+axum_http_requests_duration_seconds_bucket{method="POST",status="429",endpoint="/api/v1/ai/generate",le="0.25"} 76
+axum_http_requests_duration_seconds_bucket{method="POST",status="429",endpoint="/api/v1/ai/generate",le="0.5"} 76
+axum_http_requests_duration_seconds_bucket{method="POST",status="429",endpoint="/api/v1/ai/generate",le="1"} 76
+axum_http_requests_duration_seconds_bucket{method="POST",status="429",endpoint="/api/v1/ai/generate",le="2.5"} 76
+axum_http_requests_duration_seconds_bucket{method="POST",status="429",endpoint="/api/v1/ai/generate",le="5"} 76
+axum_http_requests_duration_seconds_bucket{method="POST",status="429",endpoint="/api/v1/ai/generate",le="10"} 76
+axum_http_requests_duration_seconds_bucket{method="POST",status="429",endpoint="/api/v1/ai/generate",le="+Inf"} 76
+axum_http_requests_duration_seconds_sum{method="POST",status="429",endpoint="/api/v1/ai/generate"} 1.4419816
+axum_http_requests_duration_seconds_count{method="POST",status="429",endpoint="/api/v1/ai/generate"} 76
+
+
+# HELP xamina_ai_requests_total Total AI endpoint requests.
+# TYPE xamina_ai_requests_total counter
+xamina_ai_requests_total 97
+# HELP xamina_ai_tokens_total Total AI tokens consumed.
+# TYPE xamina_ai_tokens_total counter
+xamina_ai_tokens_total 3741
+# HELP xamina_ai_cost_usd_total Total estimated AI cost in USD.
+# TYPE xamina_ai_cost_usd_total counter
+xamina_ai_cost_usd_total 0.000000
+# HELP xamina_ai_rate_limit_hits_total Total AI rate limit rejections.
+# TYPE xamina_ai_rate_limit_hits_total counter
+xamina_ai_rate_limit_hits_total 76
+

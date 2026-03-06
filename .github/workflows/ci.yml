@@ -1,0 +1,156 @@
+name: Xamina CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  backend-check:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: xamina-backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Install Rust components
+        run: rustup component add rustfmt clippy
+      - name: Cache Cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: xamina-backend
+      - name: Backend format check
+        run: cargo fmt --all -- --check
+      - name: Backend clippy
+        run: cargo clippy --workspace --all-targets -- -D warnings
+      - name: Backend compile check
+        run: cargo check -p api
+      - name: Backend test compile check
+        run: cargo test -p api --no-run
+
+  frontend-build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: xamina-frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: xamina-frontend/package-lock.json
+      - name: Install frontend dependencies
+        run: npm ci
+      - name: Frontend lint
+        run: npm run lint
+      - name: Frontend build
+        run: npm run build
+
+  integration-tests:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: xamina_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d xamina_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 56379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    defaults:
+      run:
+        working-directory: xamina-backend
+    env:
+      TEST_DATABASE_URL: postgres://postgres:postgres@localhost:5432/xamina_test?sslmode=disable
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Cache Cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: xamina-backend
+      - name: Run integration tests
+        run: cargo test -p api --test auth_integration --test exam_publish_integration --test question_exam_crud_integration --test exam_session_integration --test dashboard_report_notification_integration --test user_class_csv_integration --test ai_integration --test sprint10_certificate_notification_integration -- --ignored --nocapture --test-threads=1
+
+  smoke-api:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: xamina
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d xamina"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Cache Cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: xamina-backend
+      - name: Install psql client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - name: Apply migrations
+        working-directory: xamina-backend
+        env:
+          PGPASSWORD: postgres
+        run: |
+          for f in crates/db/migrations/0001_extensions.sql crates/db/migrations/0002_core_auth.sql crates/db/migrations/0003_questions.sql crates/db/migrations/0004_exams.sql crates/db/migrations/0005_submissions.sql crates/db/migrations/0006_publish_conflict_indexes.sql crates/db/migrations/0007_notifications.sql crates/db/migrations/0008_dashboard_indexes.sql crates/db/migrations/0009_sprint7_multitenant_rls.sql crates/db/migrations/0010_ai_usage_logs.sql crates/db/migrations/0011_sprint10_certificates_delivery.sql; do
+            psql -h localhost -U postgres -d xamina -v ON_ERROR_STOP=1 -f "$f"
+          done
+      - name: Start API
+        working-directory: xamina-backend
+        env:
+          DATABASE_URL: postgres://postgres:postgres@localhost:5432/xamina?sslmode=disable
+          API_HOST: 0.0.0.0
+          API_PORT: "8080"
+          JWT_SECRET: test-ci-secret
+          JWT_ACCESS_TTL_MINUTES: "30"
+          JWT_REFRESH_TTL_DAYS: "14"
+        run: |
+          cargo run -p api > /tmp/api.log 2>&1 &
+          echo $! > /tmp/api.pid
+      - name: Wait for API health
+        run: |
+          for i in {1..60}; do
+            if curl -sf http://localhost:8080/health >/dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "API health check failed"
+          cat /tmp/api.log || true
+          exit 1
+      - name: Run MVP smoke script
+        working-directory: xamina-backend
+        shell: pwsh
+        run: ./scripts/run_mvp_smoke.ps1
+      - name: Stop API
+        if: always()
+        run: |
+          if [ -f /tmp/api.pid ]; then kill "$(cat /tmp/api.pid)" || true; fi
+          cat /tmp/api.log || true

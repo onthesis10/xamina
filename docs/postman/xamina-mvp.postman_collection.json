@@ -1,0 +1,176 @@
+{
+  "info": {
+    "_postman_id": "8f358428-c338-4456-a84e-f02ed7d2b2fc",
+    "name": "Xamina MVP API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Auth Login",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"tenant_slug\": \"{{tenant_slug}}\",\n  \"email\": \"{{admin_email}}\",\n  \"password\": \"{{admin_password}}\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/auth/login",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "auth",
+            "login"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Auth Refresh",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"refresh_token\": \"{{refresh_token}}\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/auth/refresh",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "auth",
+            "refresh"
+          ]
+        }
+      }
+    },
+    {
+      "name": "List Users",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{access_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/users?page=1&page_size=20",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "users"
+          ],
+          "query": [
+            {
+              "key": "page",
+              "value": "1"
+            },
+            {
+              "key": "page_size",
+              "value": "20"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Create Question",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{access_token}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"type\": \"multiple_choice\",\n  \"content\": \"Ibu kota Indonesia adalah?\",\n  \"options_jsonb\": [\n    {\"id\": \"A\", \"label\": \"Jakarta\"},\n    {\"id\": \"B\", \"label\": \"Bandung\"}\n  ],\n  \"answer_key\": \"A\",\n  \"topic\": \"Geografi\",\n  \"difficulty\": \"easy\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/questions",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "questions"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Create Exam",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{access_token}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"title\": \"Ujian Harian\",\n  \"description\": \"Sample exam\",\n  \"duration_minutes\": 60,\n  \"pass_score\": 70,\n  \"shuffle_questions\": false,\n  \"shuffle_options\": false,\n  \"start_at\": \"2026-03-01T09:00:00Z\",\n  \"end_at\": \"2026-03-01T10:00:00Z\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/exams",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "exams"
+          ]
+        }
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8080/api/v1"
+    },
+    {
+      "key": "tenant_slug",
+      "value": "default"
+    },
+    {
+      "key": "admin_email",
+      "value": "admin@xamina.local"
+    },
+    {
+      "key": "admin_password",
+      "value": "Admin123!"
+    },
+    {
+      "key": "access_token",
+      "value": ""
+    },
+    {
+      "key": "refresh_token",
+      "value": ""
+    }
+  ]
+}

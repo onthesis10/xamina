@@ -1,0 +1,9 @@
+run_at=2026-02-26T14:30:04.4583294+07:00
+api_a=http://127.0.0.1:8080
+api_b=http://127.0.0.1:8081
+database_url=postgres://postgres:postgres@localhost:55432/xamina
+redis_url=redis://localhost:56379
+tenant_slug=ws-multi
+monitor_email=ws-monitor@xamina.local
+student_email=ws-student@xamina.local
+exam_id=11111111-1111-1111-1111-111111111111

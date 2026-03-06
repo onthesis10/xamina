@@ -1,9 +1,11 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { useEffect } from "react";
 
-export const Route = createFileRoute('/_app/dashboard')({
-  component: RouteComponent,
-})
+import { DashboardPanel } from "@/features/analytics/DashboardPanel";
+import { useUiStore } from "@/store/ui.store";
 
-function RouteComponent() {
-  return <div>Hello "/_app/dashboard"!</div>
+export function DashboardPage() {
+  useEffect(() => {
+    useUiStore.getState().setPageTitle("Dashboard");
+  }, []);
+  return <DashboardPanel />;
 }

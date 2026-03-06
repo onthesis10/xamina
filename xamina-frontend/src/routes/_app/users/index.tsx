@@ -1,9 +1,11 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { useEffect } from "react";
 
-export const Route = createFileRoute('/_app/users/')({
-    component: Users,
-})
+import { useUiStore } from "@/store/ui.store";
+import { UsersPanel } from "@/features/users/UsersPanel";
 
-function Users() {
-    return <div className="p-4">Users Management</div>
+export function UsersRoutePage() {
+  useEffect(() => {
+    useUiStore.getState().setPageTitle("Users");
+  }, []);
+  return <UsersPanel />;
 }

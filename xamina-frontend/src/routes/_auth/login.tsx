@@ -1,9 +1,11 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { useEffect } from "react";
 
-export const Route = createFileRoute('/_auth/login')({
-  component: RouteComponent,
-})
+import { LoginForm } from "@/features/auth/LoginForm";
+import { useUiStore } from "@/store/ui.store";
 
-function RouteComponent() {
-  return <div>Hello "/_auth/login"!</div>
+export function LoginRoutePage() {
+  useEffect(() => {
+    useUiStore.getState().setPageTitle("Login");
+  }, []);
+  return <LoginForm />;
 }

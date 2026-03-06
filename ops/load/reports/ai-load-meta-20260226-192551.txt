@@ -1,0 +1,7 @@
+run_at=2026-02-26T19:25:51.2079175+07:00
+mode=docker-k6
+api_url=http://localhost:8080/api/v1
+tenant_slug=default
+email=admin@xamina.local
+k6_path=
+docker_path=C:\Program Files\Docker\Docker\resources\bin\docker.exe

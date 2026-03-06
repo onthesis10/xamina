@@ -1,0 +1,9 @@
+run_at=2026-02-26T17:25:49.7462365+07:00
+api_url=http://127.0.0.1:8080
+database_url=postgres://postgres:postgres@localhost:55432/xamina
+redis_url=redis://localhost:56379
+tenant_slug=ws-force
+monitor_email=ws-monitor@xamina.local
+student_email=ws-student@xamina.local
+exam_id=22222222-2222-2222-2222-222222222222
+question_id=33333333-3333-3333-3333-333333333333

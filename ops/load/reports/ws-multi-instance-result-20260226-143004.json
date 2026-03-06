@@ -1,0 +1,28 @@
+{
+  "success": true,
+  "started_at": "2026-02-26T07:30:14.666Z",
+  "finished_at": "2026-02-26T07:30:15.195Z",
+  "api_a": "http://127.0.0.1:8080",
+  "api_b": "http://127.0.0.1:8081",
+  "exam_id": "11111111-1111-1111-1111-111111111111",
+  "monitor_user_id": "b99dcbf6-ef35-4b74-a251-6235fc445abb",
+  "student_user_id": "b0589267-c8d8-4a61-beae-93580dc807b9",
+  "received_event": {
+    "type": "StudentConnected",
+    "data": {
+      "student_id": "b0589267-c8d8-4a61-beae-93580dc807b9",
+      "student_name": "WS Student"
+    }
+  },
+  "logs": [
+    "start_at=2026-02-26T07:30:14.666Z",
+    "api_a=http://127.0.0.1:8080",
+    "api_b=http://127.0.0.1:8081",
+    "tenant_slug=ws-multi",
+    "exam_id=11111111-1111-1111-1111-111111111111",
+    "monitor_socket_opened=true",
+    "monitor_event=MonitorJoined",
+    "student_socket_opened=true",
+    "monitor_event=StudentConnected"
+  ]
+}

@@ -1,2 +1,2 @@
 pub mod domain;
-pub mod shared;
+pub mod error;

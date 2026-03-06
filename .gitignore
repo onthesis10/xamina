@@ -5,6 +5,10 @@ xamina-frontend/node_modules/
 xamina-frontend/dist/
 xamina-frontend/build/
 xamina-frontend/.env.local
+xamina-frontend/*.tsbuildinfo
+xamina-frontend/**/*.tsbuildinfo
+xamina-frontend/vite.config.js
+xamina-frontend/vite.config.d.ts
 
 # ======================
 # BACKEND (Rust)

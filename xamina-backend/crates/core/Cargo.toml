@@ -4,6 +4,20 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-axum = { workspace = true }
-tokio = { workspace = true }
+anyhow = { workspace = true }
 serde = { workspace = true }
+serde_json = { workspace = true }
+sqlx = { workspace = true }
+chrono = { workspace = true }
+uuid = { workspace = true }
+redis = { workspace = true }
+rand = { workspace = true }
+argon2 = { workspace = true }
+tracing = { workspace = true }
+async-openai = { workspace = true }
+pdf-extract = { workspace = true }
+futures-util = { workspace = true }
+printpdf = { workspace = true }
+
+[dev-dependencies]
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }

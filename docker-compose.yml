@@ -1,48 +1,145 @@
-version: "3.9"
 services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: xamina
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "55432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  postgres-test:
+    profiles: ["test"]
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: xamina_test
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "55433:5432"
+    volumes:
+      - pgdata_test:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "56379:6379"
+
+  minio:
+    image: minio/minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    ports:
+      - "59000:9000"
+      - "59001:9001"
+    volumes:
+      - miniodata:/data
+
+  mailpit:
+    image: axllent/mailpit:v1.22
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+
   api:
     build:
       context: ./xamina-backend
       dockerfile: Dockerfile
-    ports: ["8080:8080"]
     environment:
-      DATABASE_URL: postgres://...
+      DATABASE_URL: postgres://postgres:postgres@postgres:5432/xamina
       REDIS_URL: redis://redis:6379
-      JWT_SECRET: ${JWT_SECRET}
-      OPENAI_API_KEY: ${OPENAI_KEY}
-    depends_on: [postgres, redis]
-    restart: unless-stopped
+      JWT_SECRET: change-me-in-production
+      JWT_ACCESS_TTL_MINUTES: 30
+      JWT_REFRESH_TTL_DAYS: 14
+      API_HOST: 0.0.0.0
+      API_PORT: 8080
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_BASE_URL: ${OPENAI_BASE_URL:-}
+      OPENAI_MODEL: ${OPENAI_MODEL:-}
+      GROQ_API_KEY: ${GROQ_API_KEY:-}
+      GROQ_BASE_URL: ${GROQ_BASE_URL:-https://api.groq.com/openai/v1}
+      GROQ_MODEL: ${GROQ_MODEL:-llama-3.1-8b-instant}
+      AI_RATE_LIMIT_GENERATE_PER_MIN: ${AI_RATE_LIMIT_GENERATE_PER_MIN:-12}
+      AI_RATE_LIMIT_GRADE_PER_MIN: ${AI_RATE_LIMIT_GRADE_PER_MIN:-30}
+      AI_RATE_LIMIT_EXTRACT_PER_MIN: ${AI_RATE_LIMIT_EXTRACT_PER_MIN:-10}
+      AI_USAGE_RETENTION_DAYS: ${AI_USAGE_RETENTION_DAYS:-90}
+      AI_PRICING_JSON: ${AI_PRICING_JSON:-}
+      AI_MOCK_MODE: ${AI_MOCK_MODE:-0}
+      CERTIFICATE_PUBLIC_BASE_URL: ${CERTIFICATE_PUBLIC_BASE_URL:-http://localhost:8080/uploads/certificates}
+      SMTP_HOST: ${SMTP_HOST:-mailpit}
+      SMTP_PORT: ${SMTP_PORT:-1025}
+      SMTP_USERNAME: ${SMTP_USERNAME:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_FROM_EMAIL: ${SMTP_FROM_EMAIL:-noreply@xamina.local}
+      SMTP_FROM_NAME: ${SMTP_FROM_NAME:-Xamina}
+      SMTP_STARTTLS: ${SMTP_STARTTLS:-0}
+      WEB_PUSH_VAPID_PUBLIC_KEY: ${WEB_PUSH_VAPID_PUBLIC_KEY:-}
+      WEB_PUSH_VAPID_PRIVATE_KEY: ${WEB_PUSH_VAPID_PRIVATE_KEY:-}
+      WEB_PUSH_SUBJECT: ${WEB_PUSH_SUBJECT:-mailto:admin@xamina.local}
+      UPLOAD_MODE: local
+      UPLOAD_BASE_URL: http://localhost:8080/uploads/question-images
+      UPLOAD_MAX_BYTES: 5242880
+      S3_ENDPOINT: http://minio:9000
+      S3_REGION: us-east-1
+      S3_BUCKET: xamina
+      S3_ACCESS_KEY: minioadmin
+      S3_SECRET_KEY: minioadmin
+      S3_PUBLIC_BASE_URL: http://localhost:59000/xamina
+    depends_on:
+      - postgres
+      - redis
+      - minio
+      - mailpit
+    ports:
+      - "8080:8080"
 
   frontend:
-    build: ./xamina-frontend
-    ports: ["3000:80"]   # nginx serve dist/
-
-  postgres:
-    image: postgres:16-alpine
+    image: node:22-alpine
+    working_dir: /app
+    command: sh -c "npm ci && npm run dev -- --host 0.0.0.0 --port 3000"
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      - ./xamina-frontend:/app
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api
+
+  prometheus:
+    profiles: ["monitoring"]
+    image: prom/prometheus:v2.55.1
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+    volumes:
+      - ./ops/monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    ports:
+      - "9090:9090"
+    depends_on:
+      - api
+
+  grafana:
+    profiles: ["monitoring"]
+    image: grafana/grafana:11.2.0
     environment:
-      POSTGRES_DB: xamina
-      POSTGRES_PASSWORD: ${DB_PASS}
-
-  redis:
-    image: redis:7-alpine
-    command: redis-server --appendonly yes
-
-  minio:
-    image: minio/minio
-    command: server /data --console-address :9001
-    volumes: [miniodata:/data]
-
-  nginx:
-    image: nginx:alpine
-    ports: ["80:80", "443:443"]
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
     volumes:
-      - ./nginx.conf:/etc/nginx/nginx.conf
-      - certbot:/etc/letsencrypt
-    depends_on: [api, frontend]
+      - grafana_data:/var/lib/grafana
+      - ./ops/monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./ops/monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    ports:
+      - "3001:3000"
+    depends_on:
+      - prometheus
 
 volumes:
   pgdata:
+  pgdata_test:
   miniodata:
-  certbot:
+  prometheus_data:
+  grafana_data:

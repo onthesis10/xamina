@@ -1,0 +1,8 @@
+run_at=2026-02-26T14:32:26.3104174+07:00
+mode=docker-k6
+ws_url=ws://127.0.0.1:8080
+api_url=http://127.0.0.1:8080
+exam_id=11111111-1111-1111-1111-111111111111
+token_length=252
+k6_path=
+docker_path=C:\Program Files\Docker\Docker\resources\bin\docker.exe

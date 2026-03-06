@@ -1,0 +1,64 @@
+{
+  "success": true,
+  "started_at": "2026-02-26T10:25:55.422Z",
+  "finished_at": "2026-02-26T10:25:56.642Z",
+  "api_url": "http://127.0.0.1:8080",
+  "exam_id": "22222222-2222-2222-2222-222222222222",
+  "submission_id": "7c1a7a8e-d488-4178-9cf6-4d0cc2e59b37",
+  "monitor_user_id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+  "student_user_id": "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+  "events": [
+    {
+      "at": "2026-02-26T10:25:55.830Z",
+      "type": "MonitorJoined",
+      "data": {
+        "exam_id": "22222222-2222-2222-2222-222222222222"
+      }
+    },
+    {
+      "at": "2026-02-26T10:25:55.862Z",
+      "type": "StudentConnected",
+      "data": {
+        "student_id": "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+        "student_name": "WS Student"
+      }
+    },
+    {
+      "at": "2026-02-26T10:25:55.879Z",
+      "type": "StudentDisconnected",
+      "data": {
+        "student_id": "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
+      }
+    },
+    {
+      "at": "2026-02-26T10:25:56.564Z",
+      "type": "StudentFinished",
+      "data": {
+        "student_id": "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+        "score": 0
+      }
+    },
+    {
+      "at": "2026-02-26T10:25:56.609Z",
+      "type": "StudentConnected",
+      "data": {
+        "student_id": "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+        "student_name": "WS Student"
+      }
+    }
+  ],
+  "logs": [
+    "start_at=2026-02-26T10:25:55.422Z",
+    "api_url=http://127.0.0.1:8080",
+    "tenant_slug=ws-force",
+    "exam_id=22222222-2222-2222-2222-222222222222",
+    "monitor_socket_opened=true",
+    "student_socket_opened=true",
+    "student_connected_event_received=true",
+    "student_socket_closed=true",
+    "monitor_force_submit_sent=true",
+    "student_finished_event_received=true",
+    "student_reconnected=true",
+    "student_result_fetch_success=true"
+  ]
+}

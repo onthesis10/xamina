@@ -1,43 +1,83 @@
-// JWT Extractor — reusable Axum extractor
-#[derive(Debug, Clone, Deserialize)]
-pub struct JwtClaims {
-    pub user_id: Uuid,
+use async_trait::async_trait;
+use axum::{extract::FromRequestParts, http::request::Parts};
+use chrono::Utc;
+use jsonwebtoken::{decode, DecodingKey, Validation};
+use serde::{Deserialize, Serialize};
+use uuid::Uuid;
+
+use crate::app::{ApiError, SharedState};
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Claims {
+    pub sub: Uuid,
     pub tenant_id: Uuid,
-    pub role: Role,
+    pub role: String,
     pub exp: usize,
 }
 
-#[async_trait]
-impl<S> FromRequestParts<S> for JwtClaims
-where S: Send + Sync,
-{
-    type Rejection = AppError;
+#[derive(Debug, Clone)]
+pub struct AuthUser(pub Claims);
 
-    async fn from_request_parts(
-        parts: &mut Parts, _: &S,
-    ) -> Result<Self, AppError> {
-        let bearer = parts.headers
-            .get("Authorization")
-            .and_then(|v| v.to_str().ok())
-            .and_then(|s| s.strip_prefix("Bearer "))
-            .ok_or(AppError::Unauthorized)?;
+pub fn decode_claims(token: &str, jwt_secret: &str) -> Result<Claims, ApiError> {
+    let token_data = decode::<Claims>(
+        token,
+        &DecodingKey::from_secret(jwt_secret.as_bytes()),
+        &Validation::default(),
+    )
+    .map_err(|_| {
+        ApiError::new(
+            axum::http::StatusCode::UNAUTHORIZED,
+            "UNAUTHORIZED",
+            "Invalid token",
+        )
+    })?;
 
-        decode_jwt(bearer)
-            .map_err(|_| AppError::Unauthorized)
+    if token_data.claims.exp <= Utc::now().timestamp() as usize {
+        return Err(ApiError::new(
+            axum::http::StatusCode::UNAUTHORIZED,
+            "UNAUTHORIZED",
+            "Token expired",
+        ));
     }
+
+    Ok(token_data.claims)
 }
 
-// Tenant middleware — set RLS context
-pub async fn tenant_middleware(
-    State(pool): State<PgPool>,
-    Extension(claims): Extension<JwtClaims>,
-    req: Request,
-    next: Next,
-) -> Response {
-    // Set PostgreSQL RLS variable
-    sqlx::query("SET app.tenant_id = $1")
-        .bind(claims.tenant_id)
-        .execute(&pool).await.ok();
+#[async_trait]
+impl FromRequestParts<SharedState> for AuthUser {
+    type Rejection = ApiError;
 
-    next.run(req).await
+    async fn from_request_parts(
+        parts: &mut Parts,
+        state: &SharedState,
+    ) -> Result<Self, Self::Rejection> {
+        let token = parts
+            .headers
+            .get("authorization")
+            .and_then(|v| v.to_str().ok())
+            .and_then(|v| v.strip_prefix("Bearer "))
+            .ok_or_else(|| {
+                ApiError::new(
+                    axum::http::StatusCode::UNAUTHORIZED,
+                    "UNAUTHORIZED",
+                    "Missing bearer token",
+                )
+            })?;
+
+        let mut claims = decode_claims(token, &state.jwt_secret)?;
+        if claims.role == "super_admin" {
+            if let Some(raw_tenant_id) = parts
+                .headers
+                .get("x-tenant-id")
+                .and_then(|v| v.to_str().ok())
+                .filter(|v| !v.is_empty())
+            {
+                if let Ok(tenant_id) = Uuid::parse_str(raw_tenant_id) {
+                    claims.tenant_id = tenant_id;
+                }
+            }
+        }
+
+        Ok(Self(claims))
+    }
 }

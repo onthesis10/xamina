@@ -1,9 +1,11 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { useEffect } from "react";
 
-export const Route = createFileRoute('/_app/question-bank/')({
-    component: QuestionBank,
-})
+import { useUiStore } from "@/store/ui.store";
+import { QuestionBankPanel } from "@/features/question/QuestionBankPanel";
 
-function QuestionBank() {
-    return <div className="p-4">Question Bank Management</div>
+export function QuestionBankRoutePage() {
+  useEffect(() => {
+    useUiStore.getState().setPageTitle("Question Bank");
+  }, []);
+  return <QuestionBankPanel />;
 }

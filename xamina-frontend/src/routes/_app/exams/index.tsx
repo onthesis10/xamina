@@ -1,9 +1,11 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { useEffect } from "react";
 
-export const Route = createFileRoute('/_app/exams/')({
-  component: RouteComponent,
-})
+import { useUiStore } from "@/store/ui.store";
+import { ExamsPanel } from "@/features/exam/ExamsPanel";
 
-function RouteComponent() {
-  return <div>Hello "/_app/exams/"!</div>
+export function ExamsRoutePage() {
+  useEffect(() => {
+    useUiStore.getState().setPageTitle("Exams");
+  }, []);
+  return <ExamsPanel />;
 }

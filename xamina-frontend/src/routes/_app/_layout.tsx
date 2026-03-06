@@ -1,37 +1,29 @@
-import { createFileRoute } from '@tanstack/react-router'
-// Route guard + layout per role
-export const Route = createFileRoute('/_app/_layout')({
-    beforeLoad: ({ context }) => {
-        if (!context.auth.isAuthenticated) {
-            throw redirect({ to: '/login' });
-        }
-    },
+import { Outlet, redirect } from "@tanstack/react-router";
 
-    component: () => {
-        const { user } = useAuthStore();
+import { Sidebar } from "@/components/Sidebar";
+import { ToastViewport } from "@/components/ToastViewport";
+import { Topbar } from "@/components/Topbar";
+import { TenantErrorBoundary } from "@/components/TenantErrorBoundary";
+import { useAuthStore } from "@/store/auth.store";
 
-        return (
-            <div className="flex h-screen">
-                <Sidebar role={user.role} />
-                <main className="flex-1 overflow-auto">
-                    <Topbar user={user} />
-                    <Outlet /> {/* child routes */}
-                </main>
-            </div>
-        );
-    },
-});
+export function appBeforeLoad() {
+  const user = useAuthStore.getState().user;
+  if (!user) throw redirect({ to: "/auth/login" });
+}
 
-// RoleGuard component
-export function RoleGuard({
-    roles, children
-}: {
-    roles: Role[];
-    children: ReactNode;
-}) {
-    const { user } = useAuthStore();
-    if (!roles.includes(user.role)) {
-        return <Navigate to="/dashboard" />;
-    }
-    return <>{children}</>;
+export function AppLayoutPage() {
+  return (
+    <div className="app-shell">
+      <Sidebar />
+      <main className="app-main">
+        <Topbar />
+        <ToastViewport />
+        <div className="app-content">
+          <TenantErrorBoundary>
+            <Outlet />
+          </TenantErrorBoundary>
+        </div>
+      </main>
+    </div>
+  );
 }
