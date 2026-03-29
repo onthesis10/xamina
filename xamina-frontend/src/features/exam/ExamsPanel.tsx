@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 
 import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { CorePageTour } from "@/components/CorePageTour";
 import { DataTable } from "@/components/DataTable";
 import { FormField } from "@/components/FormField";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -579,7 +580,17 @@ export function ExamsPanel() {
     };
 
     return (
-        <section className="panel-grid">
+        <section className="panel-grid" data-tour="exams">
+            <CorePageTour
+                page="exams"
+                title="Kelola publish flow di Exams"
+                description="Halaman ini menjadi pusat wizard ujian, attach soal, precheck, dan publish/unpublish."
+                bullets={[
+                    "Buat exam lewat wizard, lalu attach soal dari bank soal tenant aktif.",
+                    "Gunakan precheck sebelum publish untuk cegah konflik jadwal dan state invalid.",
+                    "Monitor real-time hanya aktif untuk exam yang sudah published.",
+                ]}
+            />
             <section className="card">
                 <h3 className="section-title">Buat Ujian (Wizard)</h3>
                 <p className="state-text">Step {wizardStep}/4 - {STEP_LABELS[wizardStep]}</p>

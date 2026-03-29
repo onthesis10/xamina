@@ -1,9 +1,16 @@
-use std::sync::Arc;
+use std::{path::PathBuf, sync::Arc};
 
-use axum::{http::StatusCode, response::IntoResponse, Json, Router};
+use axum::{
+    extract::Request,
+    http::{header, HeaderValue, StatusCode},
+    middleware::Next,
+    response::{IntoResponse, Response},
+    Json, Router,
+};
 use serde::Serialize;
 use serde_json::json;
 use sqlx::PgPool;
+use tower_http::compression::CompressionLayer;
 use tower_http::cors::{Any, CorsLayer};
 use tower_http::services::ServeDir;
 use tower_http::trace::TraceLayer;
@@ -12,9 +19,10 @@ use crate::services::AppServices;
 use crate::ws_state::WsState;
 use crate::{
     ai_metrics,
+    config::BillingConfig,
     middleware::{
         ai_rate_limit::AiRateLimitProfile, metrics::build_metrics_layer,
-        tenant_context::apply_tenant_context,
+        rate_limit::GlobalRateLimitProfile, tenant_context::apply_tenant_context,
     },
     routes,
 };
@@ -24,12 +32,17 @@ use xamina_core::error::{CoreError, CoreErrorKind};
 pub struct AppState {
     pub pool: PgPool,
     pub redis: redis::Client,
+    pub started_at: chrono::DateTime<chrono::Utc>,
     pub jwt_secret: String,
     pub access_ttl_minutes: i64,
     pub refresh_ttl_days: i64,
     pub services: AppServices,
     pub ws: WsState,
     pub ai_rate_limits: AiRateLimitProfile,
+    pub global_rate_limits: GlobalRateLimitProfile,
+    pub import_max_bytes: usize,
+    pub import_max_rows: usize,
+    pub billing: BillingConfig,
 }
 
 pub type SharedState = Arc<AppState>;
@@ -112,16 +125,23 @@ pub fn create_router(state: SharedState) -> Router {
     let metrics_disabled = std::env::var("XAMINA_DISABLE_METRICS")
         .map(|v| v == "1" || v.eq_ignore_ascii_case("true"))
         .unwrap_or(false);
+    let uploads_dir = resolve_uploads_dir();
+    let api_router = routes::router().layer(axum::middleware::from_fn_with_state(
+        state.clone(),
+        crate::middleware::rate_limit::apply_global_rate_limit,
+    ));
 
     let base_router = Router::new()
         .route("/health", axum::routing::get(|| async { "OK" }))
-        .nest_service("/uploads", ServeDir::new("uploads"))
+        .nest_service("/uploads", ServeDir::new(uploads_dir))
         .merge(routes::websocket::routes())
-        .nest("/api/v1", routes::router())
+        .nest("/api/v1", api_router)
+        .layer(axum::middleware::from_fn(apply_security_headers))
         .layer(axum::middleware::from_fn_with_state(
             state.clone(),
             apply_tenant_context,
         ))
+        .layer(CompressionLayer::new())
         .layer(TraceLayer::new_for_http())
         .layer(
             CorsLayer::new()
@@ -159,4 +179,41 @@ pub fn create_router(state: SharedState) -> Router {
         )
         .layer(prometheus_layer)
         .with_state(state)
+}
+
+async fn apply_security_headers(request: Request, next: Next) -> Response {
+    let mut response = next.run(request).await;
+    let headers = response.headers_mut();
+    headers.insert("x-frame-options", HeaderValue::from_static("SAMEORIGIN"));
+    headers.insert(
+        "x-content-type-options",
+        HeaderValue::from_static("nosniff"),
+    );
+    headers.insert(
+        header::REFERRER_POLICY,
+        HeaderValue::from_static("strict-origin-when-cross-origin"),
+    );
+    headers.insert(
+        "permissions-policy",
+        HeaderValue::from_static("geolocation=(), microphone=(), camera=()"),
+    );
+    response
+}
+
+fn resolve_uploads_dir() -> PathBuf {
+    if let Ok(value) = std::env::var("XAMINA_UPLOADS_DIR") {
+        let trimmed = value.trim();
+        if !trimmed.is_empty() {
+            return PathBuf::from(trimmed);
+        }
+    }
+    let default_dir = PathBuf::from("uploads");
+    if default_dir.is_dir() {
+        return default_dir;
+    }
+    let fallback_dir = PathBuf::from("xamina-backend").join("uploads");
+    if fallback_dir.is_dir() {
+        return fallback_dir;
+    }
+    default_dir
 }

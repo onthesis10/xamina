@@ -20,6 +20,20 @@ struct TenantUserRow {
     role: String,
 }
 
+#[derive(Debug, Clone, sqlx::FromRow)]
+pub struct NotificationRecipientRow {
+    pub id: Uuid,
+    pub email: String,
+    pub name: String,
+}
+
+#[derive(Debug, Clone, sqlx::FromRow)]
+struct PushReceiptTargetRow {
+    id: Uuid,
+    tenant_id: Uuid,
+    user_id: Uuid,
+}
+
 #[derive(Debug, Clone)]
 pub struct EmailJobCreateInput {
     pub tenant_id: Uuid,
@@ -222,6 +236,24 @@ impl NotificationRepository {
             .collect())
     }
 
+    pub async fn tenant_admin_recipients(
+        &self,
+        tenant_id: Uuid,
+    ) -> Result<Vec<NotificationRecipientRow>, CoreError> {
+        sqlx::query_as::<_, NotificationRecipientRow>(
+            "SELECT id, email, name
+             FROM users
+             WHERE tenant_id = $1
+               AND role = 'admin'
+               AND is_active = TRUE
+             ORDER BY created_at ASC",
+        )
+        .bind(tenant_id)
+        .fetch_all(&self.pool)
+        .await
+        .map_err(|_| CoreError::internal("DB_ERROR", "Failed to load notification recipients"))
+    }
+
     pub async fn upsert_push_subscription(
         &self,
         tenant_id: Uuid,
@@ -342,7 +374,19 @@ impl NotificationRepository {
     }
 
     pub async fn claim_due_email_jobs(&self, limit: i64) -> Result<Vec<EmailJobDto>, CoreError> {
-        sqlx::query_as::<_, EmailJobDto>(
+        let mut tx = self.pool.begin().await.map_err(|_| {
+            CoreError::internal("DB_ERROR", "Failed to start email-claim transaction")
+        })?;
+
+        sqlx::query(
+            "SELECT set_config('app.role', 'super_admin', true),
+                    set_config('app.tenant_id', '', true)",
+        )
+        .execute(&mut *tx)
+        .await
+        .map_err(|_| CoreError::internal("DB_ERROR", "Failed to set email-claim context"))?;
+
+        let rows = sqlx::query_as::<_, EmailJobDto>(
             "WITH picked AS (
                 SELECT id
                 FROM email_jobs
@@ -363,9 +407,15 @@ impl NotificationRepository {
                 j.status, j.attempts, j.max_attempts, j.next_attempt_at, j.last_error, j.sent_at",
         )
         .bind(limit.max(1))
-        .fetch_all(&self.pool)
+        .fetch_all(&mut *tx)
         .await
-        .map_err(|_| CoreError::internal("DB_ERROR", "Failed to claim email jobs"))
+        .map_err(|_| CoreError::internal("DB_ERROR", "Failed to claim email jobs"))?;
+
+        tx.commit().await.map_err(|_| {
+            CoreError::internal("DB_ERROR", "Failed to commit email-claim transaction")
+        })?;
+
+        Ok(rows)
     }
 
     pub async fn mark_email_job_sent(&self, job_id: Uuid) -> Result<(), CoreError> {
@@ -411,7 +461,19 @@ impl NotificationRepository {
     }
 
     pub async fn claim_due_push_jobs(&self, limit: i64) -> Result<Vec<PushJobDto>, CoreError> {
-        sqlx::query_as::<_, PushJobDto>(
+        let mut tx = self.pool.begin().await.map_err(|_| {
+            CoreError::internal("DB_ERROR", "Failed to start push-claim transaction")
+        })?;
+
+        sqlx::query(
+            "SELECT set_config('app.role', 'super_admin', true),
+                    set_config('app.tenant_id', '', true)",
+        )
+        .execute(&mut *tx)
+        .await
+        .map_err(|_| CoreError::internal("DB_ERROR", "Failed to set push-claim context"))?;
+
+        let rows = sqlx::query_as::<_, PushJobDto>(
             "WITH picked AS (
                 SELECT id
                 FROM push_jobs
@@ -429,12 +491,19 @@ impl NotificationRepository {
              WHERE j.id = picked.id
              RETURNING
                 j.id, j.tenant_id, j.user_id, j.certificate_id, j.title, j.body, j.payload_jsonb,
-                j.status, j.attempts, j.max_attempts, j.next_attempt_at, j.last_error, j.sent_at",
+                j.status, j.attempts, j.max_attempts, j.next_attempt_at, j.last_error, j.sent_at,
+                j.receipt_token, j.receipt_received_at, j.receipt_clicked_at",
         )
         .bind(limit.max(1))
-        .fetch_all(&self.pool)
+        .fetch_all(&mut *tx)
         .await
-        .map_err(|_| CoreError::internal("DB_ERROR", "Failed to claim push jobs"))
+        .map_err(|_| CoreError::internal("DB_ERROR", "Failed to claim push jobs"))?;
+
+        tx.commit().await.map_err(|_| {
+            CoreError::internal("DB_ERROR", "Failed to commit push-claim transaction")
+        })?;
+
+        Ok(rows)
     }
 
     pub async fn mark_push_job_sent(&self, job_id: Uuid) -> Result<(), CoreError> {
@@ -477,5 +546,83 @@ impl NotificationRepository {
         .await
         .map_err(|_| CoreError::internal("DB_ERROR", "Failed to update push retry state"))?;
         Ok(())
+    }
+
+    pub async fn record_push_receipt(
+        &self,
+        receipt_token: Uuid,
+        event_type: &str,
+        event_at: DateTime<Utc>,
+        metadata_jsonb: Value,
+    ) -> Result<Option<(Uuid, bool)>, CoreError> {
+        let mut tx =
+            self.pool.begin().await.map_err(|_| {
+                CoreError::internal("DB_ERROR", "Failed to start receipt transaction")
+            })?;
+
+        sqlx::query("SELECT set_config('app.role', 'super_admin', true)")
+            .execute(&mut *tx)
+            .await
+            .map_err(|_| CoreError::internal("DB_ERROR", "Failed to set receipt context"))?;
+
+        let target = sqlx::query_as::<_, PushReceiptTargetRow>(
+            "SELECT id, tenant_id, user_id
+             FROM push_jobs
+             WHERE receipt_token = $1
+             FOR UPDATE",
+        )
+        .bind(receipt_token)
+        .fetch_optional(&mut *tx)
+        .await
+        .map_err(|_| CoreError::internal("DB_ERROR", "Failed to resolve push receipt token"))?;
+
+        let Some(target) = target else {
+            tx.rollback().await.map_err(|_| {
+                CoreError::internal("DB_ERROR", "Failed to rollback receipt transaction")
+            })?;
+            return Ok(None);
+        };
+
+        let inserted = sqlx::query(
+            "INSERT INTO push_delivery_receipts
+                (tenant_id, user_id, push_job_id, event_type, event_at, metadata_jsonb)
+             VALUES ($1, $2, $3, $4, $5, $6)
+             ON CONFLICT (push_job_id, event_type) DO NOTHING",
+        )
+        .bind(target.tenant_id)
+        .bind(target.user_id)
+        .bind(target.id)
+        .bind(event_type)
+        .bind(event_at)
+        .bind(metadata_jsonb)
+        .execute(&mut *tx)
+        .await
+        .map(|x| x.rows_affected() > 0)
+        .map_err(|_| CoreError::internal("DB_ERROR", "Failed to insert push receipt"))?;
+
+        let marker_sql = if event_type == "clicked" {
+            "UPDATE push_jobs
+             SET receipt_clicked_at = COALESCE(receipt_clicked_at, $2),
+                 updated_at = NOW()
+             WHERE id = $1"
+        } else {
+            "UPDATE push_jobs
+             SET receipt_received_at = COALESCE(receipt_received_at, $2),
+                 updated_at = NOW()
+             WHERE id = $1"
+        };
+
+        sqlx::query(marker_sql)
+            .bind(target.id)
+            .bind(event_at)
+            .execute(&mut *tx)
+            .await
+            .map_err(|_| CoreError::internal("DB_ERROR", "Failed to update push receipt marker"))?;
+
+        tx.commit()
+            .await
+            .map_err(|_| CoreError::internal("DB_ERROR", "Failed to commit receipt transaction"))?;
+
+        Ok(Some((target.id, inserted)))
     }
 }

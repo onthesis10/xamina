@@ -80,25 +80,39 @@ async fn download_certificate(
     Path(certificate_id): Path<Uuid>,
 ) -> Result<impl IntoResponse, ApiError> {
     ensure_student(&auth)?;
-    let cert = state
+    let (certificate_no, bytes) = state
         .services
         .certificate
-        .get_my_certificate_by_id(auth.0.tenant_id, auth.0.sub, certificate_id)
+        .download_my_certificate_pdf(auth.0.tenant_id, auth.0.sub, certificate_id)
         .await?
-        .ok_or_else(|| {
-            ApiError::new(StatusCode::NOT_FOUND, "NOT_FOUND", "Certificate not found")
-        })?;
+        ;
 
     let mut headers = HeaderMap::new();
     headers.insert(
-        header::LOCATION,
-        cert.file_url.parse().map_err(|_| {
+        header::CONTENT_TYPE,
+        "application/pdf".parse().expect("valid content type"),
+    );
+    headers.insert(
+        header::CACHE_CONTROL,
+        "no-store, no-cache, must-revalidate, max-age=0"
+            .parse()
+            .expect("valid cache control"),
+    );
+    headers.insert(header::PRAGMA, "no-cache".parse().expect("valid pragma"));
+    headers.insert(header::EXPIRES, "0".parse().expect("valid expires"));
+    let filename = format!(
+        "attachment; filename=\"xamina-certificate-{}.pdf\"",
+        certificate_no.replace(' ', "-")
+    );
+    headers.insert(
+        header::CONTENT_DISPOSITION,
+        filename.parse().map_err(|_| {
             ApiError::new(
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "INTERNAL_ERROR",
-                "Invalid certificate URL",
+                "Invalid certificate filename",
             )
         })?,
     );
-    Ok((StatusCode::FOUND, headers))
+    Ok((StatusCode::OK, headers, bytes))
 }

@@ -1,11 +1,12 @@
 mod common;
 
 use axum::{
-    body::Body,
+    body::{to_bytes, Body},
     http::{Method, Request, StatusCode},
 };
 use chrono::{Duration, Utc};
 use serde_json::json;
+use tower::ServiceExt;
 
 use common::setup_test_ctx;
 
@@ -84,6 +85,36 @@ async fn certificate_should_be_issued_once_for_passed_submission() -> anyhow::Re
     let (cert_status, cert_body) = ctx.request_json(cert_req).await;
     assert_eq!(cert_status, StatusCode::OK);
     assert!(cert_body["data"]["certificate_no"].is_string());
+    let certificate_id = cert_body["data"]["id"].as_str().unwrap_or_default().to_string();
+    let certificate_no = cert_body["data"]["certificate_no"]
+        .as_str()
+        .unwrap_or_default()
+        .to_string();
+
+    let download_req = Request::builder()
+        .method(Method::GET)
+        .uri(format!("/api/v1/certificates/{certificate_id}/download"))
+        .header("authorization", ctx.bearer_for(ctx.siswa_id, "siswa"))
+        .body(Body::empty())?;
+    let download_res = ctx.app.clone().oneshot(download_req).await?;
+    assert_eq!(download_res.status(), StatusCode::OK);
+    assert_eq!(
+        download_res
+            .headers()
+            .get("content-type")
+            .and_then(|value| value.to_str().ok()),
+        Some("application/pdf")
+    );
+    let content_disposition = download_res
+        .headers()
+        .get("content-disposition")
+        .and_then(|value| value.to_str().ok())
+        .unwrap_or_default()
+        .to_string();
+    assert!(content_disposition.contains("attachment;"));
+    assert!(content_disposition.contains(&certificate_no));
+    let download_bytes = to_bytes(download_res.into_body(), 1024 * 1024).await?;
+    assert!(download_bytes.len() > 100);
 
     let cert_count: i64 =
         sqlx::query_scalar("SELECT COUNT(*) FROM certificates WHERE submission_id = $1")
@@ -236,6 +267,143 @@ async fn push_subscription_endpoints_should_subscribe_and_unsubscribe() -> anyho
     assert_eq!(unsubscribe_status, StatusCode::OK);
     assert_eq!(unsubscribe_body["data"]["deleted"], 1);
 
+    Ok(())
+}
+
+#[tokio::test]
+#[ignore = "requires TEST_DATABASE_URL"]
+async fn push_receipt_endpoint_should_record_and_be_idempotent() -> anyhow::Result<()> {
+    let Some(ctx) = setup_test_ctx().await? else {
+        return Ok(());
+    };
+
+    let broadcast_req = Request::builder()
+        .method(Method::POST)
+        .uri("/api/v1/notifications/broadcast")
+        .header("authorization", ctx.bearer_for(ctx.guru_id, "guru"))
+        .header("content-type", "application/json")
+        .body(Body::from(
+            json!({
+                "title": "Receipt Test",
+                "message": "Receipt event should be recorded",
+                "target_roles": ["siswa"],
+                "send_push": true
+            })
+            .to_string(),
+        ))?;
+    let (broadcast_status, broadcast_body) = ctx.request_json(broadcast_req).await;
+    assert_eq!(broadcast_status, StatusCode::OK);
+    let push_job_id = broadcast_body["data"]["push_job_ids"][0]
+        .as_str()
+        .unwrap_or_default();
+    assert!(!push_job_id.is_empty());
+
+    let receipt_token: String =
+        sqlx::query_scalar("SELECT receipt_token::text FROM push_jobs WHERE id = $1")
+            .bind(uuid::Uuid::parse_str(push_job_id).expect("push job id must be valid uuid"))
+            .fetch_one(&ctx.pool)
+            .await?;
+
+    let receipt_req = Request::builder()
+        .method(Method::POST)
+        .uri("/api/v1/notifications/push/receipt")
+        .header("content-type", "application/json")
+        .body(Body::from(
+            json!({
+                "receipt_token": receipt_token,
+                "event_type": "received",
+                "metadata": { "source": "integration-test" }
+            })
+            .to_string(),
+        ))?;
+    let (receipt_status_1, receipt_body_1) = ctx.request_json(receipt_req).await;
+    assert_eq!(receipt_status_1, StatusCode::OK);
+    assert_eq!(receipt_body_1["data"]["recorded"], true);
+    assert_eq!(
+        receipt_body_1["data"]["push_job_id"]
+            .as_str()
+            .unwrap_or_default(),
+        push_job_id
+    );
+
+    let receipt_req_dup = Request::builder()
+        .method(Method::POST)
+        .uri("/api/v1/notifications/push/receipt")
+        .header("content-type", "application/json")
+        .body(Body::from(
+            json!({
+                "receipt_token": receipt_token,
+                "event_type": "received"
+            })
+            .to_string(),
+        ))?;
+    let (receipt_status_2, receipt_body_2) = ctx.request_json(receipt_req_dup).await;
+    assert_eq!(receipt_status_2, StatusCode::OK);
+    assert_eq!(receipt_body_2["data"]["recorded"], false);
+
+    let receipt_rows: i64 = sqlx::query_scalar(
+        "SELECT COUNT(*) FROM push_delivery_receipts WHERE push_job_id = $1 AND event_type = 'received'",
+    )
+    .bind(uuid::Uuid::parse_str(push_job_id).expect("push job id must be valid uuid"))
+    .fetch_one(&ctx.pool)
+    .await?;
+    assert_eq!(receipt_rows, 1);
+    Ok(())
+}
+
+#[tokio::test]
+#[ignore = "requires TEST_DATABASE_URL"]
+async fn push_receipt_endpoint_should_validate_input() -> anyhow::Result<()> {
+    let Some(ctx) = setup_test_ctx().await? else {
+        return Ok(());
+    };
+
+    let invalid_token_req = Request::builder()
+        .method(Method::POST)
+        .uri("/api/v1/notifications/push/receipt")
+        .header("content-type", "application/json")
+        .body(Body::from(
+            json!({
+                "receipt_token": "invalid-token",
+                "event_type": "received"
+            })
+            .to_string(),
+        ))?;
+    let (invalid_token_status, invalid_token_body) = ctx.request_json(invalid_token_req).await;
+    assert_eq!(invalid_token_status, StatusCode::BAD_REQUEST);
+    assert_eq!(invalid_token_body["error"]["code"], "VALIDATION_ERROR");
+
+    let invalid_event_req = Request::builder()
+        .method(Method::POST)
+        .uri("/api/v1/notifications/push/receipt")
+        .header("content-type", "application/json")
+        .body(Body::from(
+            json!({
+                "receipt_token": uuid::Uuid::new_v4(),
+                "event_type": "opened"
+            })
+            .to_string(),
+        ))?;
+    let (invalid_event_status, invalid_event_body) = ctx.request_json(invalid_event_req).await;
+    assert_eq!(invalid_event_status, StatusCode::BAD_REQUEST);
+    assert_eq!(invalid_event_body["error"]["code"], "VALIDATION_ERROR");
+
+    let unknown_token_req = Request::builder()
+        .method(Method::POST)
+        .uri("/api/v1/notifications/push/receipt")
+        .header("content-type", "application/json")
+        .body(Body::from(
+            json!({
+                "receipt_token": uuid::Uuid::new_v4(),
+                "event_type": "received"
+            })
+            .to_string(),
+        ))?;
+    let (unknown_token_status, unknown_token_body) = ctx.request_json(unknown_token_req).await;
+    assert_eq!(unknown_token_status, StatusCode::OK);
+    assert_eq!(unknown_token_body["success"], true);
+    assert_eq!(unknown_token_body["data"]["recorded"], false);
+    assert!(unknown_token_body["data"]["push_job_id"].is_null());
     Ok(())
 }
 

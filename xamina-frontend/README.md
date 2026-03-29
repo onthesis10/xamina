@@ -17,8 +17,9 @@ npm run dev -- --host 0.0.0.0 --port 3000
 
 ## Required environment variables
 
-- `VITE_API_URL`: base URL backend API, default local value:
-  - `http://localhost:8080/api/v1`
+- `VITE_API_URL`: base URL backend API.
+  - local dev default: `/api/v1` via Vite dev proxy
+  - override with absolute URL only when frontend is not using the local proxy
 
 ## Build gate
 

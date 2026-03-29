@@ -1,5 +1,6 @@
 pub mod ai;
 pub mod analytics;
+pub mod billing;
 pub mod certificate;
 pub mod exam;
 pub mod notification;

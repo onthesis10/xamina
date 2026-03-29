@@ -26,6 +26,7 @@ export type KnownErrorCode =
     | "UPLOAD_FAILED"
     | "TENANT_QUOTA_EXCEEDED"
     | "RATE_LIMITED"
+    | "DELETE_REQUEST_EXISTS"
     | "UNKNOWN";
 
 export interface ApiErrorResponse {
@@ -53,14 +54,140 @@ export interface AuthTokenPair {
     refresh_token: string;
 }
 
+export interface AuthChallengeResponse {
+    status: "challenge_required";
+    challenge_token: string;
+    delivery: "email";
+    expires_at: string;
+    reason_codes: string[];
+}
+
+export interface AuthenticatedLoginResponse extends AuthTokenPair {
+    status: "authenticated";
+    user: AuthUser;
+}
+
+export type AuthLoginResponse = AuthenticatedLoginResponse | AuthChallengeResponse;
+
 export interface LoginRequest {
     email: string;
     password: string;
     tenant_slug?: string;
 }
 
-export interface LoginResponse extends AuthTokenPair {
-    user: AuthUser;
+export interface VerifyEmailOtpRequest {
+    challenge_token: string;
+    code: string;
+}
+
+export interface ResendEmailOtpRequest {
+    challenge_token: string;
+}
+
+export interface AccountDeletionRequestDto {
+    id: string;
+    reason: string | null;
+    status: "pending" | "approved" | "rejected" | "cancelled" | "completed";
+    notes: string | null;
+    requested_at: string;
+    reviewed_at: string | null;
+    processed_at: string | null;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface CreateAccountDeletionRequestDto {
+    reason?: string;
+}
+
+export interface PrivacyExportProfileDto {
+    id: string;
+    tenant_id: string;
+    tenant_name: string;
+    tenant_slug: string;
+    email: string;
+    name: string;
+    role: Role;
+    class_id: string | null;
+    class_name: string | null;
+    is_active: boolean;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface PrivacyExportSessionDto {
+    id: string;
+    created_at: string;
+    expires_at: string;
+    revoked_at: string | null;
+}
+
+export interface PrivacyExportSubmissionDto {
+    id: string;
+    exam_id: string;
+    exam_title: string;
+    status: SubmissionStatus | string;
+    score: number | null;
+    correct_count: number;
+    total_questions: number;
+    started_at: string;
+    finished_at: string | null;
+    deadline_at: string;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface PrivacyExportNotificationDto {
+    id: string;
+    type: string;
+    title: string;
+    message: string;
+    payload_jsonb: unknown;
+    is_read: boolean;
+    read_at: string | null;
+    created_at: string;
+}
+
+export interface PrivacyExportCertificateDto {
+    id: string;
+    submission_id: string;
+    exam_id: string;
+    exam_title: string;
+    certificate_no: string;
+    score: number;
+    issued_at: string;
+    file_url: string;
+    created_at: string;
+}
+
+export interface PrivacyExportDto {
+    generated_at: string;
+    user: PrivacyExportProfileDto;
+    sessions: PrivacyExportSessionDto[];
+    submissions: PrivacyExportSubmissionDto[];
+    notifications: PrivacyExportNotificationDto[];
+    certificates: PrivacyExportCertificateDto[];
+    deletion_request: AccountDeletionRequestDto | null;
+}
+
+export interface SecurityEventDto {
+    id: string;
+    event_type: "success" | "failed_password" | "challenge_required" | "challenge_verified" | "otp_failed" | string;
+    risk_level: "low" | "medium" | "high" | string;
+    reason_codes_jsonb: unknown;
+    ip_address: string | null;
+    user_agent: string | null;
+    created_at: string;
+}
+
+export interface SecuritySettingsDto {
+    email_otp_enabled: boolean;
+    recent_events: SecurityEventDto[];
+}
+
+export interface UpdateSecuritySettingsDto {
+    email_otp_enabled: boolean;
+    current_password: string;
 }
 
 export interface PageMeta {
@@ -177,6 +304,33 @@ export interface QuestionListQuery {
 
 export interface QuestionBulkDeleteDto {
     ids: string[];
+}
+
+export type QuestionImportFormat = "xlsx" | "docx";
+
+export interface QuestionImportPreviewItem {
+    row_no: number;
+    question: CreateQuestionDto;
+}
+
+export interface QuestionImportError {
+    row_no: number;
+    code: string;
+    message: string;
+}
+
+export interface QuestionImportPreviewResponse {
+    format: QuestionImportFormat;
+    total_rows: number;
+    valid_rows: number;
+    invalid_rows: number;
+    questions: QuestionImportPreviewItem[];
+    errors: QuestionImportError[];
+}
+
+export interface QuestionImportCommitResponse {
+    inserted_count: number;
+    question_ids: string[];
 }
 
 export type ExamStatus = "draft" | "published";
@@ -425,6 +579,52 @@ export interface ClassResultQuery {
     exam_id?: string;
 }
 
+export interface ExamInsightsQuery {
+    exam_id: string;
+    class_id?: string;
+}
+
+export interface ExamInsightsSummaryDto {
+    exam_id: string;
+    exam_title: string;
+    pass_score: number;
+    submission_count: number;
+    avg_score: number;
+    pass_rate: number;
+}
+
+export interface ScoreDistributionBinDto {
+    label: string;
+    lower_bound: number;
+    upper_bound: number;
+    count: number;
+}
+
+export interface TimeSeriesPerformancePointDto {
+    day: string;
+    submissions: number;
+    avg_score: number;
+    pass_rate: number;
+}
+
+export interface ItemAnalysisRowDto {
+    question_id: string;
+    question_type: string;
+    question_content: string;
+    total_attempts: number;
+    correct_attempts: number;
+    p_value: number;
+    point_biserial: number | null;
+    recommendations: string[];
+}
+
+export interface ExamInsightsDto {
+    summary: ExamInsightsSummaryDto;
+    distribution: ScoreDistributionBinDto[];
+    time_series: TimeSeriesPerformancePointDto[];
+    item_analysis: ItemAnalysisRowDto[];
+}
+
 export interface NotificationDto {
     id: string;
     tenant_id: string;
@@ -523,4 +723,181 @@ export interface UpdateTenantDto {
     users_quota?: number;
     ai_credits_quota?: number;
     ai_credits_used?: number;
+}
+
+export interface BillingPlanDto {
+    code: string;
+    label: string;
+    amount: number;
+    currency: string;
+    users_quota: number;
+    ai_credits_quota: number;
+    description: string;
+}
+
+export interface BillingSubscriptionDto {
+    id: string;
+    tenant_id: string;
+    plan_code: string;
+    status: string;
+    provider: string;
+    provider_ref: string | null;
+    amount: number;
+    currency: string;
+    period_start: string | null;
+    period_end: string | null;
+    latest_invoice_id: string | null;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface BillingInvoiceDto {
+    id: string;
+    tenant_id: string;
+    subscription_id: string;
+    plan_code: string;
+    status: string;
+    provider: string;
+    provider_ref: string;
+    amount: number;
+    currency: string;
+    period_start: string | null;
+    period_end: string | null;
+    due_at: string;
+    paid_at: string | null;
+    attempt_count: number;
+    next_retry_at: string | null;
+    checkout_url: string | null;
+    pdf_url: string;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface BillingSummaryDto {
+    tenant_id: string;
+    available_plans: BillingPlanDto[];
+    current_subscription: BillingSubscriptionDto | null;
+    outstanding_invoice: BillingInvoiceDto | null;
+    recent_invoices: BillingInvoiceDto[];
+}
+
+export interface BillingHistoryMeta {
+    page: number;
+    page_size: number;
+    total: number;
+}
+
+export interface BillingCheckoutSessionDto {
+    gateway_mode: string;
+    checkout_url: string;
+    invoice: BillingInvoiceDto;
+    current_subscription: BillingSubscriptionDto | null;
+}
+
+export interface CreateCheckoutDto {
+    plan_code: string;
+}
+
+export interface ChangePlanDto {
+    plan_code: string;
+}
+
+export interface PlatformAnalyticsTotalsDto {
+    tenants_total: number;
+    active_tenants_total: number;
+    users_total: number;
+    exams_total: number;
+    submissions_total: number;
+    ai_requests_total: number;
+    active_mrr_total: number;
+    pending_invoices_total: number;
+}
+
+export interface PlatformTrendPointDto {
+    day: string;
+    submissions: number;
+    ai_requests: number;
+    paid_invoices: number;
+}
+
+export interface PlatformTenantSnapshotDto {
+    tenant_id: string;
+    tenant_name: string;
+    plan: string;
+    users_count: number;
+    exams_count: number;
+    submissions_count: number;
+    ai_requests_30d: number;
+    mrr: number;
+    last_activity_at: string;
+}
+
+export interface PlatformAnalyticsOverviewDto {
+    totals: PlatformAnalyticsTotalsDto;
+    trend_14d: PlatformTrendPointDto[];
+    top_tenants: PlatformTenantSnapshotDto[];
+}
+
+export interface RuntimeDependencyHealthDto {
+    healthy: boolean;
+    detail: string;
+}
+
+export interface QueueBacklogSummaryDto {
+    email_jobs: number;
+    push_jobs: number;
+    billing_retries: number;
+}
+
+export interface PlatformSystemHealthDto {
+    generated_at: string;
+    uptime_seconds: number;
+    billing_provider: string;
+    db: RuntimeDependencyHealthDto;
+    redis: RuntimeDependencyHealthDto;
+    queue_backlog: QueueBacklogSummaryDto;
+}
+
+export interface PlatformAiConfigDto {
+    preferred_provider: "auto" | "openai" | "groq";
+    openai_model: string;
+    groq_model: string;
+    ai_mock_mode: boolean;
+    generate_rate_limit_per_min: number;
+    grade_rate_limit_per_min: number;
+    extract_rate_limit_per_min: number;
+    updated_by: string | null;
+    updated_at: string;
+}
+
+export interface UpdatePlatformAiConfigDto {
+    preferred_provider?: "auto" | "openai" | "groq";
+    openai_model?: string;
+    groq_model?: string;
+    ai_mock_mode?: boolean;
+    generate_rate_limit_per_min?: number;
+    grade_rate_limit_per_min?: number;
+    extract_rate_limit_per_min?: number;
+}
+
+export interface PlatformAuditLogDto {
+    id: string;
+    tenant_id: string | null;
+    actor_user_id: string | null;
+    actor_role: string;
+    actor_name: string | null;
+    actor_email: string | null;
+    action: string;
+    target_type: string;
+    target_id: string | null;
+    metadata_jsonb: unknown;
+    created_at: string;
+}
+
+export interface PlatformAuditLogQuery {
+    page?: number;
+    page_size?: number;
+    action?: string;
+    tenant_id?: string;
+    target_type?: string;
 }

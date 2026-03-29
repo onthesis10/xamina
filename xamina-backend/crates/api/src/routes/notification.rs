@@ -9,7 +9,8 @@ use serde_json::json;
 use uuid::Uuid;
 use xamina_core::domain::notification::dto::{
     BroadcastNotificationRequest, BroadcastNotificationResult, ListNotificationsQuery,
-    NotificationDto, NotificationListMeta, PushSubscribeRequest, PushUnsubscribeRequest,
+    NotificationDto, NotificationListMeta, PushReceiptRequest, PushSubscribeRequest,
+    PushUnsubscribeRequest,
 };
 
 use crate::{
@@ -23,6 +24,7 @@ pub fn routes() -> Router<SharedState> {
         .route("/notifications/broadcast", post(broadcast_notifications))
         .route("/notifications/push/public-key", get(get_push_public_key))
         .route("/notifications/push/subscribe", post(subscribe_push))
+        .route("/notifications/push/receipt", post(record_push_receipt))
         .route(
             "/notifications/push/subscribe",
             axum::routing::delete(unsubscribe_push),
@@ -185,5 +187,23 @@ async fn unsubscribe_push(
     Ok(Json(SuccessResponse {
         success: true,
         data: json!({ "deleted": affected }),
+    }))
+}
+
+async fn record_push_receipt(
+    State(state): State<SharedState>,
+    Json(body): Json<PushReceiptRequest>,
+) -> ApiResult<SuccessResponse<serde_json::Value>> {
+    let (push_job_id, recorded) = state
+        .services
+        .notification
+        .record_push_receipt(body)
+        .await?;
+    Ok(Json(SuccessResponse {
+        success: true,
+        data: json!({
+            "recorded": recorded,
+            "push_job_id": push_job_id,
+        }),
     }))
 }

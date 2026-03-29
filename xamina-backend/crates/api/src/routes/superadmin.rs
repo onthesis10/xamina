@@ -12,6 +12,7 @@ use uuid::Uuid;
 use crate::{
     app::{ApiError, ApiResult, SharedState, SuccessResponse, SuccessWithMeta},
     middleware::auth::AuthUser,
+    platform_audit::record_platform_audit,
 };
 
 pub fn routes() -> Router<SharedState> {
@@ -202,6 +203,22 @@ async fn create_tenant(
         )
         .with_details(json!({ "db_error": e.to_string() }))
     })?;
+    record_platform_audit(
+        &state.pool,
+        &auth,
+        "platform.tenant.created",
+        "tenant",
+        Some(row.id),
+        Some(row.id),
+        json!({
+            "name": row.name.clone(),
+            "slug": row.slug.clone(),
+            "plan": row.plan.clone(),
+            "users_quota": row.users_quota,
+            "ai_credits_quota": row.ai_credits_quota
+        }),
+    )
+    .await?;
 
     Ok(Json(SuccessResponse {
         success: true,
@@ -344,6 +361,24 @@ async fn update_tenant(
         )
         .with_details(json!({ "db_error": e.to_string() }))
     })?;
+    record_platform_audit(
+        &state.pool,
+        &auth,
+        "platform.tenant.updated",
+        "tenant",
+        Some(row.id),
+        Some(row.id),
+        json!({
+            "name": row.name.clone(),
+            "slug": row.slug.clone(),
+            "plan": row.plan.clone(),
+            "is_active": row.is_active,
+            "users_quota": row.users_quota,
+            "ai_credits_quota": row.ai_credits_quota,
+            "ai_credits_used": row.ai_credits_used
+        }),
+    )
+    .await?;
 
     Ok(Json(SuccessResponse {
         success: true,

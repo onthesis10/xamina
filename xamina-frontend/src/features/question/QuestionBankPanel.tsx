@@ -2,14 +2,17 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { CorePageTour } from "@/components/CorePageTour";
 import { DataTable } from "@/components/DataTable";
 import { FormField } from "@/components/FormField";
+import { LoadingSkeleton } from "@/components/LoadingSkeleton";
 import { StatusBadge } from "@/components/StatusBadge";
 import { errorMessageForCode } from "@/lib/axios";
 import { useToast } from "@/store/toast.store";
 import type { CreateQuestionDto, QuestionDto, QuestionType } from "@/types/api.types";
 
 import { questionApi } from "./question.api";
+import { QuestionImportWizard } from "./QuestionImportWizard";
 import { AiGeneratorWidget } from "../ai/AiGeneratorWidget";
 import { AiReviewPanel } from "../ai/AiReviewPanel";
 import { AiGeneratedQuestion } from "../ai/ai.api";
@@ -226,6 +229,7 @@ export function QuestionBankPanel() {
     const [tableError, setTableError] = useState<string | null>(null);
     const [uploadState, setUploadState] = useState<UploadState>("idle");
     const [uploadMessage, setUploadMessage] = useState<string | null>(null);
+    const [isImportWizardOpen, setImportWizardOpen] = useState(false);
 
     const [isAiWidgetOpen, setAiWidgetOpen] = useState(false);
     const [aiGeneratedQuestions, setAiGeneratedQuestions] = useState<AiGeneratedQuestion[] | null>(null);
@@ -555,15 +559,30 @@ export function QuestionBankPanel() {
     };
 
     return (
-        <section className="panel-grid">
+        <section className="panel-grid" data-tour="question_bank">
+            <CorePageTour
+                page="question_bank"
+                title="Import dan rapikan Bank Soal"
+                description="Question Bank sekarang mendukung wizard import Sprint 12 selain CRUD manual dan bantuan AI."
+                bullets={[
+                    "Gunakan import wizard untuk preview row valid dan error sebelum commit.",
+                    "Bank soal tetap bisa dikelola manual, bulk delete, atau insert dari AI widget.",
+                    "Filter sidebar membantu validasi hasil import pada tenant aktif.",
+                ]}
+            />
             <div className="row gap-sm justify-between">
                 <h3 className="section-title">{editingId ? "Edit Soal" : "Tambah Soal"}</h3>
+                <div className="row gap-sm">
+                    <button className="btn btn-ghost" onClick={() => setImportWizardOpen(true)}>
+                        Import Wizard
+                    </button>
                 <button
                     className="btn btn-primary"
                     onClick={() => setAiWidgetOpen(true)}
                 >
                     ✨ AI Generator
                 </button>
+                </div>
             </div>
             <section className="card">
                 <div className="panel-grid">
@@ -688,6 +707,9 @@ export function QuestionBankPanel() {
                         </select>
                     </div>
                     <div className="question-filter-actions">
+                        <button className="btn" onClick={() => setImportWizardOpen(true)}>
+                            Import Soal
+                        </button>
                         <button
                             className={`btn ${viewMode === "table" ? "" : "btn-ghost"}`}
                             onClick={() => setViewMode("table")}
@@ -778,7 +800,13 @@ export function QuestionBankPanel() {
                         <section className="card">
                             <h3 className="section-title">Bank Soal (Card View)</h3>
                             {listError ? <p className="state-text error">{listError}</p> : null}
-                            {listQuery.isLoading ? <p className="state-text">Loading...</p> : null}
+                            {listQuery.isLoading ? (
+                                <div className="question-card-grid">
+                                    <LoadingSkeleton card lines={4} />
+                                    <LoadingSkeleton card lines={4} />
+                                    <LoadingSkeleton card lines={4} />
+                                </div>
+                            ) : null}
                             {!listQuery.isLoading && questions.length === 0 ? <p className="state-text">Belum ada data soal.</p> : null}
                             <div className="question-card-grid">
                                 {questions.map((question) => (
@@ -871,6 +899,14 @@ export function QuestionBankPanel() {
                     onClose={() => setAiWidgetOpen(false)}
                 />
             )}
+
+            <QuestionImportWizard
+                open={isImportWizardOpen}
+                onClose={() => setImportWizardOpen(false)}
+                onImported={async () => {
+                    await qc.invalidateQueries({ queryKey: ["questions"] });
+                }}
+            />
 
             {aiGeneratedQuestions && (
                 <AiReviewPanel

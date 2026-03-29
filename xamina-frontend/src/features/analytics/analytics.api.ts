@@ -1,8 +1,12 @@
 import { api } from "@/lib/axios";
+import { downloadBinaryFile } from "@/lib/file-download";
 import type {
     ApiSuccess,
     ApiSuccessWithMeta,
     ClassResultQuery,
+    DashboardStatsDto,
+    ExamInsightsDto,
+    ExamInsightsQuery,
     BroadcastNotificationRequest,
     BroadcastNotificationResult,
     ClassResultRow,
@@ -20,6 +24,10 @@ export const analyticsApi = {
         const response = await api.get<ApiSuccess<DashboardSummaryDto>>("/dashboard/summary");
         return response.data.data;
     },
+    stats: async () => {
+        const response = await api.get<ApiSuccess<DashboardStatsDto>>("/dashboard/stats");
+        return response.data.data;
+    },
     classResults: async (params: ClassResultQuery) => {
         const response = await api.get<ApiSuccessWithMeta<ClassResultRow[], PageMeta>>(
             "/reports/class-results",
@@ -29,6 +37,19 @@ export const analyticsApi = {
     },
     exportClassResultsCsv: async (params: ClassResultQuery) => {
         const response = await api.get("/reports/class-results/export.csv", {
+            params,
+            responseType: "blob",
+        });
+        return response.data as Blob;
+    },
+    examInsights: async (params: ExamInsightsQuery) => {
+        const response = await api.get<ApiSuccess<ExamInsightsDto>>("/reports/exam-insights", {
+            params,
+        });
+        return response.data.data;
+    },
+    exportExamInsightsExcel: async (params: ExamInsightsQuery) => {
+        const response = await api.get("/reports/exam-insights/export.xlsx", {
             params,
             responseType: "blob",
         });
@@ -87,5 +108,10 @@ export const certificateApi = {
         );
         return response.data.data;
     },
+    downloadPdf: async (certificateId: string) =>
+        downloadBinaryFile(`/certificates/${certificateId}/download`, {
+            expectedContentTypes: ["pdf", "octet-stream"],
+            fallbackMimeType: "application/pdf",
+        }),
     downloadUrl: (certificateId: string) => `/api/v1/certificates/${certificateId}/download`,
 };

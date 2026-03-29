@@ -14,13 +14,31 @@ xamina-frontend/vite.config.d.ts
 # BACKEND (Rust)
 # ======================
 xamina-backend/target/
+xamina-backend/target-*/
 xamina-backend/.env
+xamina-backend/uploads/
+xamina-backend/crates/api/uploads/
 
 # ======================
 # GLOBAL ENV
 # ======================
 .env
 .env.local
+.tmp_ai_stream_payload.json
+
+# ======================
+# Tooling / Reports
+# ======================
+.playwright-cli/
+output/
+ops/load/reports/
+xamina-frontend/output/
+xamina-frontend/playwright-report/
+xamina-frontend/test-results/
+xamina-frontend/e2e/*-snapshots/
+xamina-frontend/playwright-report.txt
+xamina-frontend/report.json
+xamina-frontend/out.txt
 
 # ======================
 # Logs

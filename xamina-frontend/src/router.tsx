@@ -1,6 +1,7 @@
 import { createRootRoute, createRoute, createRouter, Outlet, redirect } from "@tanstack/react-router";
 
 import { AppLayoutPage, appBeforeLoad } from "@/routes/_app/_layout";
+import { BillingRoutePage } from "@/routes/_app/billing";
 import { ClassesRoutePage } from "@/routes/_app/classes";
 import { DashboardPage } from "@/routes/_app/dashboard";
 import { ExamsRoutePage } from "@/routes/_app/exams";
@@ -10,11 +11,17 @@ import { MyExamsRoutePage } from "@/routes/_app/my-exams";
 import { MyExamResultRoutePage } from "@/routes/_app/my-exams/result";
 import { MyExamSessionRoutePage } from "@/routes/_app/my-exams/session";
 import { PlatformTenantsRoutePage } from "@/routes/_app/platform/tenants";
+import { PlatformBillingRoutePage } from "@/routes/_app/platform/billing";
+import { PlatformConsoleRoutePage } from "@/routes/_app/platform/console";
+import { PlatformAuditLogsRoutePage } from "@/routes/_app/platform/audit-logs";
+import { PrivacyRoutePage } from "@/routes/_app/privacy";
 import { QuestionBankRoutePage } from "@/routes/_app/question-bank";
 import { ReportsRoutePage } from "@/routes/_app/reports";
 import { UsersRoutePage } from "@/routes/_app/users";
 import { LoginRoutePage } from "@/routes/_auth/login";
 import { RootLayout } from "@/routes/__root";
+import { DesignSystemRoutePage } from "@/routes/design-system";
+import { PricingRoutePage } from "@/routes/pricing";
 import { LandingPage } from "@/routes";
 import { useAuthStore } from "@/store/auth.store";
 import type { Role } from "@/types/common.types";
@@ -39,6 +46,18 @@ const authRoute = createRoute({
   component: () => <Outlet />,
 });
 
+const designSystemRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/design-system",
+  component: DesignSystemRoutePage,
+});
+
+const pricingRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/pricing",
+  component: PricingRoutePage,
+});
+
 const loginRoute = createRoute({
   getParentRoute: () => authRoute,
   path: "/login",
@@ -60,6 +79,13 @@ const dashboardRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/dashboard",
   component: DashboardPage,
+});
+
+const billingRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: "/billing",
+  beforeLoad: () => requireRole(["admin"]),
+  component: BillingRoutePage,
 });
 
 const usersRoute = createRoute({
@@ -118,6 +144,12 @@ const myCertificatesRoute = createRoute({
   component: MyCertificatesRoutePage,
 });
 
+const privacyRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: "/privacy",
+  component: PrivacyRoutePage,
+});
+
 const myExamSessionRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/my-exams/session/$submissionId",
@@ -139,11 +171,35 @@ const platformTenantsRoute = createRoute({
   component: PlatformTenantsRoutePage,
 });
 
+const platformBillingRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: "/platform/billing",
+  beforeLoad: () => requireRole(["super_admin"]),
+  component: PlatformBillingRoutePage,
+});
+
+const platformConsoleRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: "/platform/console",
+  beforeLoad: () => requireRole(["super_admin"]),
+  component: PlatformConsoleRoutePage,
+});
+
+const platformAuditLogsRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: "/platform/audit-logs",
+  beforeLoad: () => requireRole(["super_admin"]),
+  component: PlatformAuditLogsRoutePage,
+});
+
 const routeTree = rootRoute.addChildren([
   indexRoute,
+  designSystemRoute,
+  pricingRoute,
   authRoute.addChildren([loginRoute]),
   appRoute.addChildren([
     dashboardRoute,
+    billingRoute,
     usersRoute,
     classesRoute,
     questionRoute,
@@ -152,9 +208,13 @@ const routeTree = rootRoute.addChildren([
     reportsRoute,
     myExamsRoute,
     myCertificatesRoute,
+    privacyRoute,
     myExamSessionRoute,
     myExamResultRoute,
+    platformConsoleRoute,
+    platformAuditLogsRoute,
     platformTenantsRoute,
+    platformBillingRoute,
   ]),
 ]);
 

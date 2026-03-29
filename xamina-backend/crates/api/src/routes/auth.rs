@@ -1,10 +1,13 @@
+#[path = "auth_security.rs"]
+pub(crate) mod auth_security;
+
 use argon2::{
     password_hash::{PasswordHash, PasswordVerifier},
     Argon2,
 };
 use axum::{
     extract::State,
-    http::StatusCode,
+    http::{HeaderMap, StatusCode},
     routing::{get, post},
     Json, Router,
 };
@@ -20,9 +23,18 @@ use crate::{
     middleware::auth::{AuthUser, Claims},
 };
 
+use self::auth_security::{
+    build_security_context, create_login_challenge, ensure_auth_security_schema_for_state,
+    evaluate_risk, issue_session, load_settings_row, record_failed_password_attempt,
+    record_successful_login, resend_login_otp, verify_login_otp, LoginResponseData,
+    SecurityUserRow,
+};
+
 pub fn routes() -> Router<SharedState> {
     Router::new()
         .route("/auth/login", post(login))
+        .route("/auth/login/verify-email-otp", post(verify_email_otp))
+        .route("/auth/login/resend-email-otp", post(resend_email_otp))
         .route("/auth/refresh", post(refresh_token))
         .route("/auth/logout", post(logout))
         .route("/auth/me", get(me))
@@ -36,6 +48,17 @@ struct LoginRequest {
 }
 
 #[derive(Deserialize)]
+struct VerifyOtpRequest {
+    challenge_token: String,
+    code: String,
+}
+
+#[derive(Deserialize)]
+struct ResendOtpRequest {
+    challenge_token: String,
+}
+
+#[derive(Deserialize)]
 struct RefreshRequest {
     refresh_token: String,
 }
@@ -45,7 +68,7 @@ struct LogoutRequest {
     refresh_token: String,
 }
 
-#[derive(Serialize)]
+#[derive(Debug, Clone, Serialize)]
 pub struct AuthUserDto {
     pub id: Uuid,
     pub tenant_id: Uuid,
@@ -55,19 +78,12 @@ pub struct AuthUserDto {
     pub class_id: Option<Uuid>,
 }
 
-#[derive(Serialize)]
-struct LoginData {
-    access_token: String,
-    refresh_token: String,
-    user: AuthUserDto,
-}
-
-#[derive(FromRow)]
+#[derive(Debug, Clone, FromRow)]
 struct TenantRow {
     id: Uuid,
 }
 
-#[derive(FromRow)]
+#[derive(Debug, Clone, FromRow)]
 struct UserRow {
     id: Uuid,
     tenant_id: Uuid,
@@ -92,7 +108,7 @@ fn verify_password(hash: &str, password: &str) -> bool {
         .is_ok()
 }
 
-fn issue_access_token(
+pub(crate) fn issue_access_token(
     state: &crate::app::AppState,
     user_id: Uuid,
     tenant_id: Uuid,
@@ -121,10 +137,12 @@ fn issue_access_token(
 
 async fn login(
     State(state): State<SharedState>,
+    headers: HeaderMap,
     Json(body): Json<LoginRequest>,
-) -> ApiResult<SuccessResponse<LoginData>> {
-    let tenant_slug = body.tenant_slug.unwrap_or_else(|| "default".to_string());
+) -> ApiResult<SuccessResponse<LoginResponseData>> {
+    ensure_auth_security_schema_for_state(&state).await?;
 
+    let tenant_slug = body.tenant_slug.unwrap_or_else(|| "default".to_string());
     let tenant = sqlx::query_as::<_, TenantRow>(
         "SELECT id FROM tenants WHERE slug = $1 AND is_active = TRUE",
     )
@@ -146,12 +164,14 @@ async fn login(
         )
     })?;
 
+    let email = body.email.trim().to_ascii_lowercase();
     let user = sqlx::query_as::<_, UserRow>(
         "SELECT id, tenant_id, email, password_hash, name, role, class_id, is_active
-         FROM users WHERE tenant_id = $1 AND email = $2",
+         FROM users
+         WHERE tenant_id = $1 AND email = $2",
     )
     .bind(tenant.id)
-    .bind(body.email.to_lowercase())
+    .bind(&email)
     .fetch_optional(&state.pool)
     .await
     .map_err(|_| {
@@ -160,16 +180,27 @@ async fn login(
             "DB_ERROR",
             "Failed to load user",
         )
-    })?
-    .ok_or_else(|| {
-        ApiError::new(
+    })?;
+
+    let security_ctx = build_security_context(&headers);
+
+    let Some(user) = user else {
+        return Err(ApiError::new(
             StatusCode::UNAUTHORIZED,
             "INVALID_LOGIN",
             "Invalid credentials",
-        )
-    })?;
+        ));
+    };
 
     if !user.is_active || !verify_password(&user.password_hash, &body.password) {
+        record_failed_password_attempt(
+            &state,
+            user.tenant_id,
+            Some(user.id),
+            &email,
+            &security_ctx,
+        )
+        .await?;
         return Err(ApiError::new(
             StatusCode::UNAUTHORIZED,
             "INVALID_LOGIN",
@@ -177,40 +208,61 @@ async fn login(
         ));
     }
 
-    let access_token = issue_access_token(&state, user.id, user.tenant_id, &user.role)?;
-    let refresh_token = format!("{}{}", Uuid::new_v4(), Uuid::new_v4());
-    let refresh_exp = Utc::now() + Duration::days(state.refresh_ttl_days);
+    let settings = load_settings_row(&state, user.tenant_id, user.id).await?;
+    let security_user = map_user(&user);
+    let risk = evaluate_risk(
+        &state,
+        user.tenant_id,
+        &user.email,
+        user.id,
+        &security_ctx,
+        settings.email_otp_enabled,
+    )
+    .await?;
 
-    sqlx::query("INSERT INTO refresh_tokens (tenant_id, user_id, token, expires_at) VALUES ($1, $2, $3, $4)")
-        .bind(user.tenant_id)
-        .bind(user.id)
-        .bind(&refresh_token)
-        .bind(refresh_exp)
-        .execute(&state.pool)
-        .await
-        .map_err(|_| ApiError::new(StatusCode::INTERNAL_SERVER_ERROR, "DB_ERROR", "Failed to create refresh token"))?;
+    if risk.requires_challenge {
+        let challenge =
+            create_login_challenge(&state, &security_user, &risk, &security_ctx).await?;
+        return Ok(Json(SuccessResponse {
+            success: true,
+            data: LoginResponseData::ChallengeRequired(challenge),
+        }));
+    }
 
+    let session = issue_session(&state, &security_user).await?;
+    record_successful_login(&state, &security_user, &security_ctx).await?;
     Ok(Json(SuccessResponse {
         success: true,
-        data: LoginData {
-            access_token,
-            refresh_token,
-            user: AuthUserDto {
-                id: user.id,
-                tenant_id: user.tenant_id,
-                email: user.email,
-                name: user.name,
-                role: user.role,
-                class_id: user.class_id,
-            },
-        },
+        data: LoginResponseData::Authenticated(session),
+    }))
+}
+
+async fn verify_email_otp(
+    State(state): State<SharedState>,
+    Json(body): Json<VerifyOtpRequest>,
+) -> ApiResult<SuccessResponse<auth_security::LoginSessionData>> {
+    let session = verify_login_otp(&state, &body.challenge_token, &body.code).await?;
+    Ok(Json(SuccessResponse {
+        success: true,
+        data: session,
+    }))
+}
+
+async fn resend_email_otp(
+    State(state): State<SharedState>,
+    Json(body): Json<ResendOtpRequest>,
+) -> ApiResult<SuccessResponse<auth_security::LoginChallengeData>> {
+    let challenge = resend_login_otp(&state, &body.challenge_token).await?;
+    Ok(Json(SuccessResponse {
+        success: true,
+        data: challenge,
     }))
 }
 
 async fn refresh_token(
     State(state): State<SharedState>,
     Json(body): Json<RefreshRequest>,
-) -> ApiResult<SuccessResponse<LoginData>> {
+) -> ApiResult<SuccessResponse<auth_security::LoginSessionData>> {
     let user = sqlx::query_as::<_, UserRow>(
         "SELECT u.id, u.tenant_id, u.email, u.password_hash, u.name, u.role, u.class_id, u.is_active
          FROM refresh_tokens rt
@@ -235,33 +287,10 @@ async fn refresh_token(
             )
         })?;
 
-    let access_token = issue_access_token(&state, user.id, user.tenant_id, &user.role)?;
-    let refresh_token = format!("{}{}", Uuid::new_v4(), Uuid::new_v4());
-    let refresh_exp = Utc::now() + Duration::days(state.refresh_ttl_days);
-
-    sqlx::query("INSERT INTO refresh_tokens (tenant_id, user_id, token, expires_at) VALUES ($1, $2, $3, $4)")
-        .bind(user.tenant_id)
-        .bind(user.id)
-        .bind(&refresh_token)
-        .bind(refresh_exp)
-        .execute(&state.pool)
-        .await
-        .map_err(|_| ApiError::new(StatusCode::INTERNAL_SERVER_ERROR, "DB_ERROR", "Failed to create new token"))?;
-
+    let session = issue_session(&state, &map_user(&user)).await?;
     Ok(Json(SuccessResponse {
         success: true,
-        data: LoginData {
-            access_token,
-            refresh_token,
-            user: AuthUserDto {
-                id: user.id,
-                tenant_id: user.tenant_id,
-                email: user.email,
-                name: user.name,
-                role: user.role,
-                class_id: user.class_id,
-            },
-        },
+        data: session,
     }))
 }
 
@@ -321,4 +350,16 @@ async fn me(
             class_id: user.class_id,
         },
     }))
+}
+
+fn map_user(user: &UserRow) -> SecurityUserRow {
+    SecurityUserRow {
+        id: user.id,
+        tenant_id: user.tenant_id,
+        email: user.email.clone(),
+        password_hash: user.password_hash.clone(),
+        name: user.name.clone(),
+        role: user.role.clone(),
+        class_id: user.class_id,
+    }
 }

@@ -21,6 +21,11 @@ docker compose up -d postgres redis minio
 - `crates/db/migrations/0009_sprint7_multitenant_rls.sql`
 - `crates/db/migrations/0010_ai_usage_logs.sql`
 - `crates/db/migrations/0011_sprint10_certificates_delivery.sql`
+- `crates/db/migrations/0012_sprint10_push_receipts.sql`
+- `crates/db/migrations/0013_sprint11_analytics_indexes.sql`
+- `crates/db/migrations/0014_sprint13_billing.sql`
+- `crates/db/migrations/0015_sprint14_platform_ops.sql`
+- `crates/db/migrations/0016_sprint15_privacy_requests.sql`
 
 4. Start API:
 
@@ -58,6 +63,9 @@ Catatan:
 - `POST /api/v1/auth/refresh`
 - `POST /api/v1/auth/logout`
 - `GET /api/v1/auth/me`
+- `GET /api/v1/auth/privacy/export`
+- `GET /api/v1/auth/privacy/delete-request`
+- `POST /api/v1/auth/privacy/delete-request`
 - `GET /api/v1/users`
 - `POST /api/v1/users`
 - `GET /api/v1/users/:id`
@@ -101,11 +109,28 @@ Catatan:
 - `GET /api/v1/notifications`
 - `PATCH /api/v1/notifications/:id/read`
 - `POST /api/v1/notifications/read-all`
+- `GET /api/v1/platform/tenants/:tenant_id/billing/summary`
+- `GET /api/v1/platform/tenants/:tenant_id/billing/history`
+- `POST /api/v1/platform/tenants/:tenant_id/billing/checkout`
+- `POST /api/v1/platform/tenants/:tenant_id/billing/change-plan`
+- `GET /api/v1/platform/tenants/:tenant_id/billing/invoices/:invoice_id/pdf`
+- `POST /api/v1/billing/midtrans/webhook`
 - `POST /api/v1/ai/extract-pdf`
 - `POST /api/v1/ai/generate`
 - `POST /api/v1/ai/generate/stream`
 - `POST /api/v1/ai/grade`
 - `GET /health`
+
+## Sprint 13 billing config
+
+- `BILLING_PROVIDER=mock|midtrans`
+- `MIDTRANS_SERVER_KEY`
+- `MIDTRANS_CLIENT_KEY`
+- `MIDTRANS_BASE_URL`
+- `MIDTRANS_MERCHANT_ID`
+- `INVOICE_PUBLIC_BASE_URL`
+- `BILLING_DUNNING_INTERVAL_SECS`
+- `BILLING_DUNNING_MAX_ATTEMPTS`
 
 ## CSV import rollout compatibility
 

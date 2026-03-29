@@ -8,7 +8,7 @@ use super::{
     dto::{
         BroadcastNotificationRequest, BroadcastNotificationResult, CertificateDeliveryResult,
         CreateNotificationInput, EmailJobDto, ListNotificationsQuery, NotificationListMeta,
-        PushJobDto, PushSubscribeRequest, PushSubscriptionDto,
+        PushJobDto, PushReceiptRequest, PushSubscribeRequest, PushSubscriptionDto,
     },
     models::NotificationListResult,
     repository::{EmailJobCreateInput, NotificationRepository, PushJobCreateInput},
@@ -177,6 +177,7 @@ impl NotificationService {
                     "type": "certificate_issued",
                     "certificate_id": certificate.id,
                     "certificate_url": certificate.file_url,
+                    "url": "/app/my-certificates",
                 }),
             })
             .await
@@ -186,6 +187,76 @@ impl NotificationService {
             email_job_id,
             push_job_id,
         })
+    }
+
+    pub async fn notify_billing_invoice_due(
+        &self,
+        tenant_id: Uuid,
+        invoice_id: Uuid,
+        plan_code: &str,
+        amount: i64,
+        currency: &str,
+        due_at: chrono::DateTime<Utc>,
+        pdf_url: &str,
+        checkout_url: Option<&str>,
+    ) -> Result<(), CoreError> {
+        let recipients = self.repo.tenant_admin_recipients(tenant_id).await?;
+        if recipients.is_empty() {
+            return Ok(());
+        }
+
+        let checkout_hint = checkout_url
+            .map(|url| format!("\nLink pembayaran: {url}"))
+            .unwrap_or_default();
+        let message = format!(
+            "Invoice billing untuk plan {} jatuh tempo pada {}. Nominal {} {}. Invoice PDF: {}{}",
+            plan_code,
+            due_at.format("%Y-%m-%d %H:%M:%S UTC"),
+            currency,
+            amount,
+            pdf_url,
+            checkout_hint,
+        );
+
+        let payloads = recipients
+            .iter()
+            .map(|recipient| CreateNotificationInput {
+                tenant_id,
+                user_id: recipient.id,
+                r#type: "billing_invoice_due".to_string(),
+                title: "Invoice Billing Jatuh Tempo".to_string(),
+                message: message.clone(),
+                payload_jsonb: json!({
+                    "invoice_id": invoice_id,
+                    "plan_code": plan_code,
+                    "amount": amount,
+                    "currency": currency,
+                    "due_at": due_at,
+                    "pdf_url": pdf_url,
+                    "checkout_url": checkout_url,
+                }),
+            })
+            .collect::<Vec<_>>();
+        self.repo.insert_many(&payloads).await?;
+
+        for recipient in recipients {
+            let _ = self
+                .repo
+                .enqueue_email_job(EmailJobCreateInput {
+                    tenant_id,
+                    user_id: recipient.id,
+                    certificate_id: None,
+                    to_email: recipient.email,
+                    subject: "Invoice Billing Xamina Jatuh Tempo".to_string(),
+                    body: format!(
+                        "Halo {},\n\n{}\n\nDokumen invoice: {}",
+                        recipient.name, message, pdf_url
+                    ),
+                })
+                .await;
+        }
+
+        Ok(())
     }
 
     pub async fn broadcast(
@@ -255,6 +326,7 @@ impl NotificationService {
                         payload_jsonb: json!({
                             "type": "broadcast",
                             "created_at": Utc::now(),
+                            "url": "/app/dashboard",
                         }),
                     })
                     .await
@@ -372,6 +444,43 @@ impl NotificationService {
         self.repo
             .delete_push_subscription_by_id(subscription_id)
             .await
+    }
+
+    pub async fn record_push_receipt(
+        &self,
+        request: PushReceiptRequest,
+    ) -> Result<(Option<Uuid>, bool), CoreError> {
+        let token = Uuid::parse_str(request.receipt_token.trim()).map_err(|_| {
+            CoreError::bad_request(
+                "VALIDATION_ERROR",
+                "receipt_token must be a valid UUID string",
+            )
+        })?;
+
+        let event_type = request.event_type.trim().to_ascii_lowercase();
+        if event_type != "received" && event_type != "clicked" {
+            return Err(CoreError::bad_request(
+                "VALIDATION_ERROR",
+                "event_type must be either received or clicked",
+            ));
+        }
+
+        let event_at = request
+            .event_at
+            .as_deref()
+            .and_then(|raw| chrono::DateTime::parse_from_rfc3339(raw).ok())
+            .map(|dt| dt.with_timezone(&Utc))
+            .unwrap_or_else(Utc::now);
+        let metadata = request.metadata.unwrap_or_else(|| json!({}));
+
+        let result = self
+            .repo
+            .record_push_receipt(token, &event_type, event_at, metadata)
+            .await?;
+        let Some((push_job_id, recorded)) = result else {
+            return Ok((None, false));
+        };
+        Ok((Some(push_job_id), recorded))
     }
 }
 

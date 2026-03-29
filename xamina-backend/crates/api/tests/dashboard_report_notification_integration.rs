@@ -109,6 +109,79 @@ async fn report_should_enforce_access_and_support_csv_export() -> anyhow::Result
 
 #[tokio::test]
 #[ignore = "requires TEST_DATABASE_URL"]
+async fn exam_insights_should_enforce_access_and_support_xlsx_export() -> anyhow::Result<()> {
+    let Some(ctx) = setup_test_ctx().await? else {
+        return Ok(());
+    };
+
+    let exam_id = create_published_exam_with_submission(&ctx).await?;
+
+    let missing_exam_id_req = Request::builder()
+        .method(Method::GET)
+        .uri("/api/v1/reports/exam-insights")
+        .header("authorization", ctx.bearer_for(ctx.admin_id, "admin"))
+        .body(Body::empty())?;
+    let (missing_status, missing_body) = ctx.request_json(missing_exam_id_req).await;
+    assert_eq!(missing_status, StatusCode::BAD_REQUEST);
+    assert_eq!(missing_body["error"]["code"], "VALIDATION_ERROR");
+
+    let admin_req = Request::builder()
+        .method(Method::GET)
+        .uri(format!("/api/v1/reports/exam-insights?exam_id={exam_id}"))
+        .header("authorization", ctx.bearer_for(ctx.admin_id, "admin"))
+        .body(Body::empty())?;
+    let (admin_status, admin_body) = ctx.request_json(admin_req).await;
+    assert_eq!(admin_status, StatusCode::OK);
+    assert_eq!(
+        admin_body["data"]["summary"]["exam_id"]
+            .as_str()
+            .unwrap_or_default(),
+        exam_id
+    );
+    assert!(admin_body["data"]["distribution"].is_array());
+    assert!(admin_body["data"]["time_series"].is_array());
+    assert!(admin_body["data"]["item_analysis"].is_array());
+
+    let guru_req = Request::builder()
+        .method(Method::GET)
+        .uri(format!("/api/v1/reports/exam-insights?exam_id={exam_id}"))
+        .header("authorization", ctx.bearer_for(ctx.guru_id, "guru"))
+        .body(Body::empty())?;
+    let (guru_status, _) = ctx.request_json(guru_req).await;
+    assert_eq!(guru_status, StatusCode::OK);
+
+    let siswa_req = Request::builder()
+        .method(Method::GET)
+        .uri(format!("/api/v1/reports/exam-insights?exam_id={exam_id}"))
+        .header("authorization", ctx.bearer_for(ctx.siswa_id, "siswa"))
+        .body(Body::empty())?;
+    let (siswa_status, siswa_body) = ctx.request_json(siswa_req).await;
+    assert_eq!(siswa_status, StatusCode::FORBIDDEN);
+    assert_eq!(siswa_body["error"]["code"], "FORBIDDEN");
+
+    let xlsx_req = Request::builder()
+        .method(Method::GET)
+        .uri(format!(
+            "/api/v1/reports/exam-insights/export.xlsx?exam_id={exam_id}"
+        ))
+        .header("authorization", ctx.bearer_for(ctx.admin_id, "admin"))
+        .body(Body::empty())?;
+    let xlsx_res = ctx.app.clone().oneshot(xlsx_req).await?;
+    assert_eq!(xlsx_res.status(), StatusCode::OK);
+    let content_type = xlsx_res
+        .headers()
+        .get(header::CONTENT_TYPE)
+        .and_then(|x| x.to_str().ok())
+        .unwrap_or_default();
+    assert!(content_type.contains("spreadsheetml.sheet"));
+    let xlsx_bytes = to_bytes(xlsx_res.into_body(), 5 * 1024 * 1024).await?;
+    assert!(xlsx_bytes.len() > 200);
+
+    Ok(())
+}
+
+#[tokio::test]
+#[ignore = "requires TEST_DATABASE_URL"]
 async fn notification_should_be_created_from_publish_and_finish_flow() -> anyhow::Result<()> {
     let Some(ctx) = setup_test_ctx().await? else {
         return Ok(());

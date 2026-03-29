@@ -5,7 +5,9 @@ use std::{
 
 use api::{
     app::{create_router, AppState},
+    config::BillingConfig,
     middleware::auth::Claims,
+    middleware::rate_limit::GlobalRateLimitProfile,
     services::AppServices,
 };
 use axum::{
@@ -25,10 +27,12 @@ pub struct TestCtx {
     pub app: Router,
     pub pool: PgPool,
     pub tenant_id: Uuid,
+    pub super_admin_id: Uuid,
     pub admin_id: Uuid,
     pub guru_id: Uuid,
     pub siswa_id: Uuid,
     pub jwt_secret: String,
+    pub services: AppServices,
 }
 
 impl TestCtx {
@@ -83,6 +87,7 @@ pub async fn setup_test_ctx() -> anyhow::Result<Option<TestCtx>> {
     reset_db(&pool).await?;
 
     let tenant_id = Uuid::new_v4();
+    let super_admin_id = Uuid::new_v4();
     let admin_id = Uuid::new_v4();
     let guru_id = Uuid::new_v4();
     let siswa_id = Uuid::new_v4();
@@ -95,10 +100,12 @@ pub async fn setup_test_ctx() -> anyhow::Result<Option<TestCtx>> {
     sqlx::query(
         "INSERT INTO users (id, tenant_id, email, password_hash, name, role, is_active)
          VALUES
-         ($1, $4, 'admin@test.local', 'Admin123!', 'Admin', 'admin', TRUE),
-         ($2, $4, 'guru@test.local', 'Guru123!', 'Guru', 'guru', TRUE),
-         ($3, $4, 'siswa@test.local', 'Siswa123!', 'Siswa', 'siswa', TRUE)",
+         ($1, $5, 'sa@test.local', 'SuperAdmin123!', 'Super Admin', 'super_admin', TRUE),
+         ($2, $5, 'admin@test.local', 'Admin123!', 'Admin', 'admin', TRUE),
+         ($3, $5, 'guru@test.local', 'Guru123!', 'Guru', 'guru', TRUE),
+         ($4, $5, 'siswa@test.local', 'Siswa123!', 'Siswa', 'siswa', TRUE)",
     )
+    .bind(super_admin_id)
     .bind(admin_id)
     .bind(guru_id)
     .bind(siswa_id)
@@ -106,27 +113,52 @@ pub async fn setup_test_ctx() -> anyhow::Result<Option<TestCtx>> {
     .execute(&pool)
     .await?;
 
-    let jwt_secret = "test-secret".to_string();
     let redis = redis::Client::open("redis://localhost:56379")?;
+    let services = AppServices::new(
+        &pool,
+        redis.clone(),
+        "http://localhost:8080/uploads/invoices".to_string(),
+    );
+    let jwt_secret = "test-secret".to_string();
     let state = Arc::new(AppState {
-        services: AppServices::new(&pool, redis.clone()),
+        services: services.clone(),
         pool: pool.clone(),
         redis,
+        started_at: Utc::now(),
         jwt_secret: jwt_secret.clone(),
         access_ttl_minutes: 30,
         refresh_ttl_days: 14,
         ws: api::ws_state::WsState::new(),
         ai_rate_limits: api::middleware::ai_rate_limit::AiRateLimitProfile::from_env(),
+        global_rate_limits: GlobalRateLimitProfile {
+            default_per_min: 120,
+            auth_per_min: 20,
+            import_per_min: 8,
+        },
+        import_max_bytes: 2 * 1024 * 1024,
+        import_max_rows: 500,
+        billing: BillingConfig {
+            provider: "mock".to_string(),
+            midtrans_server_key: Some("test-midtrans-secret".to_string()),
+            midtrans_client_key: Some("test-midtrans-client".to_string()),
+            midtrans_base_url: "https://example.invalid".to_string(),
+            midtrans_merchant_id: Some("merchant-test".to_string()),
+            invoice_public_base_url: "http://localhost:8080/uploads/invoices".to_string(),
+            dunning_interval_secs: 30,
+            dunning_max_attempts: 3,
+        },
     });
 
     Ok(Some(TestCtx {
         app: create_router(state),
         pool,
         tenant_id,
+        super_admin_id,
         admin_id,
         guru_id,
         siswa_id,
         jwt_secret,
+        services,
     }))
 }
 
@@ -177,7 +209,37 @@ async fn run_migrations(pool: &PgPool) -> anyhow::Result<()> {
     .execute(pool)
     .await?;
     sqlx::raw_sql(include_str!(
+        "../../../db/migrations/0012_sprint10_push_receipts.sql"
+    ))
+    .execute(pool)
+    .await?;
+    sqlx::raw_sql(include_str!(
+        "../../../db/migrations/0013_sprint11_analytics_indexes.sql"
+    ))
+    .execute(pool)
+    .await?;
+    sqlx::raw_sql(include_str!(
         "../../../db/migrations/20260225105400_schema_app_and_superadmin_seed.sql"
+    ))
+    .execute(pool)
+    .await?;
+    sqlx::raw_sql(include_str!(
+        "../../../db/migrations/0014_sprint13_billing.sql"
+    ))
+    .execute(pool)
+    .await?;
+    sqlx::raw_sql(include_str!(
+        "../../../db/migrations/0015_sprint14_platform_ops.sql"
+    ))
+    .execute(pool)
+    .await?;
+    sqlx::raw_sql(include_str!(
+        "../../../db/migrations/0016_sprint15_privacy_requests.sql"
+    ))
+    .execute(pool)
+    .await?;
+    sqlx::raw_sql(include_str!(
+        "../../../db/migrations/0017_sprint15_auth_security.sql"
     ))
     .execute(pool)
     .await?;
@@ -186,7 +248,7 @@ async fn run_migrations(pool: &PgPool) -> anyhow::Result<()> {
 
 async fn reset_db(pool: &PgPool) -> anyhow::Result<()> {
     sqlx::query(
-        "TRUNCATE TABLE push_jobs, email_jobs, push_subscriptions, certificates, ai_usage_logs, notifications, submission_anomalies, submission_answers, submissions, exam_questions, exams, questions, refresh_tokens, users, classes, tenants RESTART IDENTITY CASCADE",
+        "TRUNCATE TABLE auth_login_events, auth_login_challenges, user_security_settings, account_deletion_requests, platform_audit_logs, platform_ai_settings, billing_webhook_events, billing_invoices, billing_subscriptions, push_delivery_receipts, push_jobs, email_jobs, push_subscriptions, certificates, ai_usage_logs, notifications, submission_anomalies, submission_answers, submissions, exam_questions, exams, questions, refresh_tokens, users, classes, tenants RESTART IDENTITY CASCADE",
     )
     .execute(pool)
     .await?;

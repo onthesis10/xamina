@@ -3,5 +3,5 @@ interface StatusBadgeProps {
 }
 
 export function StatusBadge({ value }: StatusBadgeProps) {
-  return <span className={`status-badge status-${value}`}>{value}</span>;
+  return <span className={`status-badge status-${value}`}>{value.replace(/_/g, " ")}</span>;
 }

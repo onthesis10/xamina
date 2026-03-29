@@ -84,6 +84,14 @@ pub struct PushUnsubscribeRequest {
     pub endpoint: String,
 }
 
+#[derive(Debug, Clone, Deserialize)]
+pub struct PushReceiptRequest {
+    pub receipt_token: String,
+    pub event_type: String,
+    pub event_at: Option<String>,
+    pub metadata: Option<Value>,
+}
+
 #[derive(Debug, Clone, Serialize, FromRow)]
 pub struct PushSubscriptionDto {
     pub id: Uuid,
@@ -129,4 +137,7 @@ pub struct PushJobDto {
     pub next_attempt_at: DateTime<Utc>,
     pub last_error: Option<String>,
     pub sent_at: Option<DateTime<Utc>>,
+    pub receipt_token: Uuid,
+    pub receipt_received_at: Option<DateTime<Utc>>,
+    pub receipt_clicked_at: Option<DateTime<Utc>>,
 }

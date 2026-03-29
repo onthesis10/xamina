@@ -25,17 +25,18 @@ export class TenantErrorBoundary extends Component<Props, State> {
     public render() {
         if (this.state.hasError) {
             return (
-                <div className="flex items-center justify-center p-xl h-full w-full">
-                    <div className="stack gap-sm text-center card">
-                        <h1 className="text-xl font-bold text-red-500">Terjadi Kesalahan Aplikasi</h1>
+                <div className="card text-center" style={{ maxWidth: 720, margin: "0 auto" }}>
+                    <p className="section-eyebrow">Runtime Guard</p>
+                    <div className="stack gap-sm">
+                        <h1 className="section-title">Terjadi Kesalahan Aplikasi</h1>
                         <p className="text-dimmed">Ada komponen yang gagal dimuat dalam tenant Anda.</p>
                         {this.state.errorStr && (
-                            <div className="p-sm bg-gray-100 rounded text-xs text-left" style={{ overflow: "auto" }}>
+                            <div className="surface-muted p-sm text-xs" style={{ overflow: "auto", textAlign: "left" }}>
                                 <code>{this.state.errorStr}</code>
                             </div>
                         )}
                         <button
-                            className="btn btn-primary mt-sm"
+                            className="btn btn-primary"
                             onClick={() => {
                                 this.setState({ hasError: false, errorStr: undefined });
                                 window.location.reload();

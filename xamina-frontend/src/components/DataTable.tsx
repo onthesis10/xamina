@@ -1,5 +1,7 @@
 import { ReactNode } from "react";
 
+import { LoadingSkeleton } from "./LoadingSkeleton";
+
 export interface DataTableColumn<T> {
   key: string;
   header: string;
@@ -33,7 +35,12 @@ export function DataTable<T extends { id: string }>(props: DataTableProps<T>) {
 
   return (
     <section className="card">
-      {title ? <h3 className="section-title">{title}</h3> : null}
+      {title ? (
+        <>
+          <p className="section-eyebrow">Data View</p>
+          <h3 className="section-title">{title}</h3>
+        </>
+      ) : null}
       {actions ? <div className="table-actions">{actions}</div> : null}
       <div className="table-wrap">
         <table className="x-table">
@@ -46,29 +53,38 @@ export function DataTable<T extends { id: string }>(props: DataTableProps<T>) {
             </tr>
           </thead>
           <tbody>
-            {rows.map((row) => (
-              <tr key={row.id}>
-                {onToggleSelect ? (
-                  <td className="checkbox-cell">
-                    <input
-                      type="checkbox"
-                      checked={selectedIds?.includes(row.id) ?? false}
-                      onChange={(e) => onToggleSelect(row.id, e.target.checked)}
-                      aria-label={`Select row ${row.id}`}
-                    />
-                  </td>
-                ) : null}
-                {columns.map((col) => (
-                  <td key={`${row.id}-${col.key}`}>{col.render(row)}</td>
+            {loading
+              ? Array.from({ length: 4 }).map((_, index) => (
+                  <tr key={`skeleton-${index}`}>
+                    {onToggleSelect ? <td className="checkbox-cell" /> : null}
+                    <td colSpan={columns.length}>
+                      <LoadingSkeleton lines={2} />
+                    </td>
+                  </tr>
+                ))
+              : rows.map((row) => (
+                  <tr key={row.id}>
+                    {onToggleSelect ? (
+                      <td className="checkbox-cell">
+                        <input
+                          type="checkbox"
+                          checked={selectedIds?.includes(row.id) ?? false}
+                          onChange={(e) => onToggleSelect(row.id, e.target.checked)}
+                          aria-label={`Select row ${row.id}`}
+                        />
+                      </td>
+                    ) : null}
+                    {columns.map((col) => (
+                      <td key={`${row.id}-${col.key}`}>{col.render(row)}</td>
+                    ))}
+                  </tr>
                 ))}
-              </tr>
-            ))}
           </tbody>
         </table>
       </div>
-      {loading ? <p className="state-text">Loading...</p> : null}
-      {error ? <p className="state-text error">{error}</p> : null}
-      {!loading && !error && rows.length === 0 ? <p className="state-text">{emptyLabel}</p> : null}
+      {loading ? <p className="state-text mt-2">Memuat data...</p> : null}
+      {error ? <p className="state-text error mt-2">{error}</p> : null}
+      {!loading && !error && rows.length === 0 ? <p className="state-text mt-2">{emptyLabel}</p> : null}
     </section>
   );
 }

@@ -1,4 +1,5 @@
 import { api } from '../../lib/axios';
+import { resolveApiBaseUrl } from '@/lib/api-base';
 import type { ApiSuccess } from '@/types/api.types';
 import { useAuthStore } from '@/store/auth.store';
 
@@ -75,7 +76,7 @@ export const aiApi = {
             throw new Error("Missing auth token");
         }
 
-        const baseUrl = (import.meta.env.VITE_API_URL || "http://localhost:8080/api/v1").replace(/\/+$/, "");
+        const baseUrl = resolveApiBaseUrl(import.meta.env.VITE_API_URL).replace(/\/+$/, "");
         const response = await fetch(`${baseUrl}/ai/generate/stream`, {
             method: "POST",
             headers: {

@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { DataTable } from "@/components/DataTable";
+import { FormField } from "@/components/FormField";
 import { StatusBadge } from "@/components/StatusBadge";
 import { api, errorMessageForCode } from "@/lib/axios";
 import { useToast } from "@/store/toast.store";
@@ -191,28 +192,70 @@ export function UsersPanel() {
     () => Math.max(1, Math.ceil((meta?.total ?? 0) / (meta?.page_size ?? 20))),
     [meta],
   );
+  const activeCount = useMemo(() => users.filter((user) => user.is_active).length, [users]);
 
   return (
     <section className="panel-grid">
-      <section className="card">
-        <h3 className="section-title">Tambah User</h3>
-        <div className="grid-4">
-          <input className="input" placeholder="name" value={form.name} onChange={(e) => setForm((v) => ({ ...v, name: e.target.value }))} />
-          <input className="input" placeholder="email" value={form.email} onChange={(e) => setForm((v) => ({ ...v, email: e.target.value }))} />
-          <select className="input" value={form.role} onChange={(e) => setForm((v) => ({ ...v, role: e.target.value as CreateUserDto["role"] }))}>
-            <option value="admin">admin</option>
-            <option value="guru">guru</option>
-            <option value="siswa">siswa</option>
-          </select>
-          <select className="input" value={form.class_id} onChange={(e) => setForm((v) => ({ ...v, class_id: e.target.value }))}>
-            <option value="">no class</option>
-            {classOptions.map((c) => (
-              <option key={c.id} value={c.id}>{c.name}</option>
-            ))}
-          </select>
-          <input className="input" type="password" placeholder="password" value={form.password} onChange={(e) => setForm((v) => ({ ...v, password: e.target.value }))} />
+      <section className="page-hero card">
+        <div className="page-hero-copy">
+          <p className="section-eyebrow">User Management</p>
+          <h2 className="section-title">Kelola akun admin, guru, dan siswa dalam satu ritme visual</h2>
+          <p className="section-desc">
+            Gunakan panel ini untuk membuat akun baru, import CSV, dan menjaga distribusi role tetap terstruktur pada tenant aktif.
+          </p>
         </div>
-        <div className="row gap-sm" style={{ marginTop: 8 }}>
+        <div className="metric-grid mixed">
+          <section className="card stat-card card-muted">
+            <p className="stat-label">Total User</p>
+            <h3 className="metric-value">{meta?.total ?? users.length}</h3>
+            <p className="stat-trend">Akun yang terdaftar pada tenant aktif.</p>
+          </section>
+          <section className="card stat-card card-muted">
+            <p className="stat-label">Active</p>
+            <h3 className="metric-value" style={{ color: "var(--success)" }}>{activeCount}</h3>
+            <p className="stat-trend trend-up">Status aktif pada halaman saat ini.</p>
+          </section>
+          <section className="card stat-card card-muted">
+            <p className="stat-label">Classes</p>
+            <h3 className="metric-value">{classOptions.length}</h3>
+            <p className="stat-trend">Pilihan kelas tersedia untuk assignment siswa.</p>
+          </section>
+        </div>
+      </section>
+
+      <section className="card section-shell">
+        <div>
+          <p className="section-eyebrow">Tambah User</p>
+          <h3 className="section-title-sm">Buat akun baru</h3>
+          <p className="state-text">Form ini mengikuti struktur field yang sama dengan design system production.</p>
+        </div>
+        <div className="grid-3">
+          <FormField label="Nama">
+            <input className="input" placeholder="Nama lengkap" value={form.name} onChange={(e) => setForm((v) => ({ ...v, name: e.target.value }))} />
+          </FormField>
+          <FormField label="Email">
+            <input className="input" placeholder="nama@sekolah.sch.id" value={form.email} onChange={(e) => setForm((v) => ({ ...v, email: e.target.value }))} />
+          </FormField>
+          <FormField label="Role">
+            <select className="input" value={form.role} onChange={(e) => setForm((v) => ({ ...v, role: e.target.value as CreateUserDto["role"] }))}>
+              <option value="admin">admin</option>
+              <option value="guru">guru</option>
+              <option value="siswa">siswa</option>
+            </select>
+          </FormField>
+          <FormField label="Class">
+            <select className="input" value={form.class_id} onChange={(e) => setForm((v) => ({ ...v, class_id: e.target.value }))}>
+              <option value="">no class</option>
+              {classOptions.map((c) => (
+                <option key={c.id} value={c.id}>{c.name}</option>
+              ))}
+            </select>
+          </FormField>
+          <FormField label="Password" hint="Kosongkan bila backend men-generate default password sendiri.">
+            <input className="input" type="password" placeholder="Password123!" value={form.password} onChange={(e) => setForm((v) => ({ ...v, password: e.target.value }))} />
+          </FormField>
+        </div>
+        <div className="page-actions">
           <button className="btn" onClick={() => createMutation.mutate()} disabled={createMutation.isPending}>Simpan User</button>
           <button className="btn btn-ghost" onClick={() => setShowImportModal(true)}>Import CSV File</button>
           <button
@@ -269,7 +312,7 @@ export function UsersPanel() {
         columns={[
           { key: "name", header: "Name", render: (u) => u.name },
           { key: "email", header: "Email", render: (u) => u.email },
-          { key: "role", header: "Role", render: (u) => u.role },
+          { key: "role", header: "Role", render: (u) => <span className="badge badge-orange">{u.role}</span> },
           {
             key: "class",
             header: "Class",
@@ -280,7 +323,7 @@ export function UsersPanel() {
             key: "action",
             header: "Action",
             render: (u) => (
-              <div className="row gap-sm">
+              <div className="inline-actions">
                 <button className="btn btn-ghost" onClick={() => setEditingUser(u)}>Edit</button>
                 <button className="btn btn-ghost" onClick={() => setDeletingUser(u)}>Delete</button>
               </div>
@@ -319,24 +362,34 @@ export function UsersPanel() {
         }}
       >
         {editingUser ? (
-          <div className="panel-grid" style={{ marginTop: 8 }}>
-            <input className="input" value={editingUser.name} onChange={(e) => setEditingUser((u) => (u ? { ...u, name: e.target.value } : u))} />
-            <input className="input" value={editingUser.email} onChange={(e) => setEditingUser((u) => (u ? { ...u, email: e.target.value } : u))} />
-            <select className="input" value={editingUser.role} onChange={(e) => setEditingUser((u) => (u ? { ...u, role: e.target.value as CreateUserDto["role"] } : u))}>
-              <option value="admin">admin</option>
-              <option value="guru">guru</option>
-              <option value="siswa">siswa</option>
-            </select>
-            <select className="input" value={editingUser.class_id ?? ""} onChange={(e) => setEditingUser((u) => (u ? { ...u, class_id: e.target.value || null } : u))}>
-              <option value="">no class</option>
-              {classOptions.map((c) => (
-                <option key={c.id} value={c.id}>{c.name}</option>
-              ))}
-            </select>
-            <select className="input" value={String(editingUser.is_active)} onChange={(e) => setEditingUser((u) => (u ? { ...u, is_active: e.target.value === "true" } : u))}>
-              <option value="true">active</option>
-              <option value="false">inactive</option>
-            </select>
+          <div className="grid-2" style={{ marginTop: 8 }}>
+            <FormField label="Nama">
+              <input className="input" value={editingUser.name} onChange={(e) => setEditingUser((u) => (u ? { ...u, name: e.target.value } : u))} />
+            </FormField>
+            <FormField label="Email">
+              <input className="input" value={editingUser.email} onChange={(e) => setEditingUser((u) => (u ? { ...u, email: e.target.value } : u))} />
+            </FormField>
+            <FormField label="Role">
+              <select className="input" value={editingUser.role} onChange={(e) => setEditingUser((u) => (u ? { ...u, role: e.target.value as CreateUserDto["role"] } : u))}>
+                <option value="admin">admin</option>
+                <option value="guru">guru</option>
+                <option value="siswa">siswa</option>
+              </select>
+            </FormField>
+            <FormField label="Class">
+              <select className="input" value={editingUser.class_id ?? ""} onChange={(e) => setEditingUser((u) => (u ? { ...u, class_id: e.target.value || null } : u))}>
+                <option value="">no class</option>
+                {classOptions.map((c) => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </select>
+            </FormField>
+            <FormField label="Status">
+              <select className="input" value={String(editingUser.is_active)} onChange={(e) => setEditingUser((u) => (u ? { ...u, is_active: e.target.value === "true" } : u))}>
+                <option value="true">active</option>
+                <option value="false">inactive</option>
+              </select>
+            </FormField>
           </div>
         ) : null}
       </ConfirmDialog>

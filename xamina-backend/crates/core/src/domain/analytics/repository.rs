@@ -6,6 +6,7 @@ use crate::error::CoreError;
 use super::dto::{
     ClassResultRow, StudentRecentResult, StudentUpcomingExam, TenantQuotaStatsDto, TrendPoint,
 };
+use super::models::{ExamInsightAnswerRow, ExamInsightExamRow, ExamInsightSubmissionRow};
 
 #[derive(Debug, Clone)]
 pub struct AnalyticsRepository {
@@ -392,5 +393,78 @@ impl AnalyticsRepository {
             ai_credits_quota: row.3,
         })
         .ok_or_else(|| CoreError::not_found("NOT_FOUND", "Tenant not found"))
+    }
+
+    pub async fn find_exam_for_insights(
+        &self,
+        tenant_id: Uuid,
+        exam_id: Uuid,
+    ) -> Result<Option<ExamInsightExamRow>, CoreError> {
+        sqlx::query_as::<_, ExamInsightExamRow>(
+            "SELECT
+                id AS exam_id,
+                title AS exam_title,
+                pass_score,
+                created_by
+             FROM exams
+             WHERE tenant_id = $1
+               AND id = $2",
+        )
+        .bind(tenant_id)
+        .bind(exam_id)
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(|_| CoreError::internal("DB_ERROR", "Failed to load exam for insights"))
+    }
+
+    pub async fn list_exam_submissions_for_insights(
+        &self,
+        tenant_id: Uuid,
+        exam_id: Uuid,
+        class_id: Option<Uuid>,
+    ) -> Result<Vec<ExamInsightSubmissionRow>, CoreError> {
+        sqlx::query_as::<_, ExamInsightSubmissionRow>(
+            "SELECT
+                s.id AS submission_id,
+                s.score::float8 AS score,
+                s.finished_at,
+                s.question_order_jsonb
+             FROM submissions s
+             JOIN users u
+               ON u.id = s.student_id
+             WHERE s.tenant_id = $1
+               AND s.exam_id = $2
+               AND s.status IN ('finished', 'auto_finished')
+               AND ($3::uuid IS NULL OR u.class_id = $3)
+             ORDER BY s.finished_at ASC NULLS LAST, s.started_at ASC",
+        )
+        .bind(tenant_id)
+        .bind(exam_id)
+        .bind(class_id)
+        .fetch_all(&self.pool)
+        .await
+        .map_err(|_| CoreError::internal("DB_ERROR", "Failed to load exam submissions"))
+    }
+
+    pub async fn list_submission_answers_for_insights(
+        &self,
+        submission_ids: &[Uuid],
+    ) -> Result<Vec<ExamInsightAnswerRow>, CoreError> {
+        if submission_ids.is_empty() {
+            return Ok(Vec::new());
+        }
+
+        sqlx::query_as::<_, ExamInsightAnswerRow>(
+            "SELECT
+                submission_id,
+                question_id,
+                answer_jsonb
+             FROM submission_answers
+             WHERE submission_id = ANY($1)",
+        )
+        .bind(submission_ids)
+        .fetch_all(&self.pool)
+        .await
+        .map_err(|_| CoreError::internal("DB_ERROR", "Failed to load submission answers"))
     }
 }

@@ -112,6 +112,7 @@ try {
         "0009_sprint7_multitenant_rls.sql",
         "0010_ai_usage_logs.sql",
         "0011_sprint10_certificates_delivery.sql",
+        "0012_sprint10_push_receipts.sql",
         "20260225105400_schema_app_and_superadmin_seed.sql"
     )
     foreach ($file in $migrationFiles) {

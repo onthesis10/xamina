@@ -3,6 +3,10 @@ name = "api"
 version = "0.1.0"
 edition = "2021"
 
+[features]
+default = []
+real_web_push = ["dep:web-push", "dep:openssl"]
+
 [dependencies]
 anyhow = { workspace = true }
 argon2 = { workspace = true }
@@ -31,3 +35,12 @@ axum-prometheus = "0.7"
 aws-sdk-s3 = "1"
 aws-credential-types = "1"
 lettre = { workspace = true }
+web-push = { workspace = true, optional = true }
+openssl = { version = "0.10", features = ["vendored"], optional = true }
+rust_xlsxwriter = "0.79"
+calamine = "0.26"
+quick-xml = "0.37"
+zip = "2.4"
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
+sha2 = "0.10"
+pdf-extract = { workspace = true }

@@ -1,8 +1,12 @@
 pub mod ai_metrics;
 pub mod app;
+pub mod billing_gateway;
+pub mod billing_worker;
 pub mod config;
 pub mod delivery_worker;
 pub mod middleware;
+pub mod platform_audit;
+pub mod privacy_ops;
 pub mod routes;
 pub mod services;
 pub mod ws_bus;

@@ -1,3 +1,4 @@
+import { resolveWsBaseUrl } from "@/lib/api-base";
 import { useAuthStore } from "@/store/auth.store";
 
 export type WsEventType =
@@ -51,12 +52,7 @@ class ExamSocket {
             return;
         }
 
-        // Derive WS base from the same env var as axios (VITE_API_URL).
-        // VITE_API_URL = "http://localhost:8080/api/v1" → need host only → "ws://localhost:8080"
-        const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:8080/api/v1";
-        const urlObj = new URL(apiUrl);
-        const wsProto = urlObj.protocol === "https:" ? "wss:" : "ws:";
-        const wsBase = `${wsProto}//${urlObj.host}`;
+        const wsBase = resolveWsBaseUrl(import.meta.env.VITE_API_URL);
         const url = `${wsBase}/ws/exam/${this.opts.examId}?token=${encodeURIComponent(token)}`;
 
         this.ws = new WebSocket(url);

@@ -3,6 +3,9 @@ import type {
     ApiSuccess,
     ApiSuccessWithMeta,
     PageMeta,
+    QuestionImportCommitResponse,
+    QuestionImportFormat,
+    QuestionImportPreviewResponse,
     QuestionBulkDeleteDto,
     QuestionDto,
     QuestionListQuery,
@@ -29,6 +32,30 @@ export const questionApi = {
     },
     bulkDelete: async (payload: QuestionBulkDeleteDto) => {
         await api.post("/questions/bulk-delete", payload);
+    },
+    previewImport: async (file: File) => {
+        const formData = new FormData();
+        formData.append("file", file);
+        const response = await api.post<ApiSuccess<QuestionImportPreviewResponse>>(
+            "/questions/import/preview",
+            formData,
+        );
+        return response.data.data;
+    },
+    commitImport: async (questions: QuestionImportPreviewResponse["questions"]) => {
+        const response = await api.post<ApiSuccess<QuestionImportCommitResponse>>(
+            "/questions/import/commit",
+            {
+                questions: questions.map((item) => item.question),
+            },
+        );
+        return response.data.data;
+    },
+    downloadImportTemplate: async (format: QuestionImportFormat = "xlsx") => {
+        const response = await api.get(`/questions/import/template.${format}`, {
+            responseType: "blob",
+        });
+        return response.data as Blob;
     },
     uploadImage: async (file: File) => {
         const formData = new FormData();

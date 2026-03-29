@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { DataTable } from "@/components/DataTable";
+import { FormField } from "@/components/FormField";
 import { StatusBadge } from "@/components/StatusBadge";
 import { api, errorMessageForCode } from "@/lib/axios";
 import { useToast } from "@/store/toast.store";
@@ -71,14 +72,41 @@ export function ClassesPanel() {
 
   return (
     <section className="panel-grid">
-      <section className="card">
-        <h3 className="section-title">Tambah Kelas</h3>
-        <div className="grid-3">
-          <input className="input" value={form.name} placeholder="name" onChange={(e) => setForm((v) => ({ ...v, name: e.target.value }))} />
-          <input className="input" value={form.grade} placeholder="grade" onChange={(e) => setForm((v) => ({ ...v, grade: e.target.value }))} />
-          <input className="input" value={form.major} placeholder="major" onChange={(e) => setForm((v) => ({ ...v, major: e.target.value }))} />
+      <section className="page-hero card">
+        <div className="page-hero-copy">
+          <p className="section-eyebrow">Class Registry</p>
+          <h2 className="section-title">Susun struktur kelas yang bersih untuk semua alur admin dan siswa</h2>
+          <p className="section-desc">Data kelas dipakai lintas user assignment, exam targeting, dan laporan. Karena itu tampilan dan aksi utamanya dibuat sejelas mungkin.</p>
         </div>
-        <button className="btn" onClick={() => createMutation.mutate()} disabled={createMutation.isPending}>Simpan Kelas</button>
+        <div className="metric-grid mixed">
+          <section className="card stat-card card-muted">
+            <p className="stat-label">Total Kelas</p>
+            <h3 className="metric-value">{classQuery.data?.length ?? 0}</h3>
+            <p className="stat-trend">Jumlah kelas yang sudah terdaftar pada tenant aktif.</p>
+          </section>
+        </div>
+      </section>
+
+      <section className="card section-shell">
+        <div>
+          <p className="section-eyebrow">Tambah Kelas</p>
+          <h3 className="section-title-sm">Buat entri kelas baru</h3>
+          <p className="state-text">Gunakan naming yang konsisten untuk grade dan major agar laporan tetap rapi.</p>
+        </div>
+        <div className="grid-3">
+          <FormField label="Nama Kelas">
+            <input className="input" value={form.name} placeholder="XII IPA 1" onChange={(e) => setForm((v) => ({ ...v, name: e.target.value }))} />
+          </FormField>
+          <FormField label="Grade">
+            <input className="input" value={form.grade} placeholder="XII" onChange={(e) => setForm((v) => ({ ...v, grade: e.target.value }))} />
+          </FormField>
+          <FormField label="Major">
+            <input className="input" value={form.major} placeholder="IPA" onChange={(e) => setForm((v) => ({ ...v, major: e.target.value }))} />
+          </FormField>
+        </div>
+        <div className="page-actions">
+          <button className="btn" onClick={() => createMutation.mutate()} disabled={createMutation.isPending}>Simpan Kelas</button>
+        </div>
       </section>
 
       <DataTable
@@ -95,7 +123,7 @@ export function ClassesPanel() {
             key: "action",
             header: "Action",
             render: (c) => (
-              <div className="row gap-sm">
+              <div className="inline-actions">
                 <button className="btn btn-ghost" onClick={() => setEditingClass(c)}>Edit</button>
                 <button className="btn btn-ghost" onClick={() => {
                   updateMutation.mutate({
@@ -131,14 +159,22 @@ export function ClassesPanel() {
         }}
       >
         {editingClass ? (
-          <div className="panel-grid" style={{ marginTop: 8 }}>
-            <input className="input" value={editingClass.name} onChange={(e) => setEditingClass((v) => (v ? { ...v, name: e.target.value } : v))} />
-            <input className="input" value={editingClass.grade ?? ""} onChange={(e) => setEditingClass((v) => (v ? { ...v, grade: e.target.value || null } : v))} />
-            <input className="input" value={editingClass.major ?? ""} onChange={(e) => setEditingClass((v) => (v ? { ...v, major: e.target.value || null } : v))} />
-            <select className="input" value={String(editingClass.is_active)} onChange={(e) => setEditingClass((v) => (v ? { ...v, is_active: e.target.value === "true" } : v))}>
-              <option value="true">active</option>
-              <option value="false">inactive</option>
-            </select>
+          <div className="grid-2" style={{ marginTop: 8 }}>
+            <FormField label="Nama">
+              <input className="input" value={editingClass.name} onChange={(e) => setEditingClass((v) => (v ? { ...v, name: e.target.value } : v))} />
+            </FormField>
+            <FormField label="Grade">
+              <input className="input" value={editingClass.grade ?? ""} onChange={(e) => setEditingClass((v) => (v ? { ...v, grade: e.target.value || null } : v))} />
+            </FormField>
+            <FormField label="Major">
+              <input className="input" value={editingClass.major ?? ""} onChange={(e) => setEditingClass((v) => (v ? { ...v, major: e.target.value || null } : v))} />
+            </FormField>
+            <FormField label="Status">
+              <select className="input" value={String(editingClass.is_active)} onChange={(e) => setEditingClass((v) => (v ? { ...v, is_active: e.target.value === "true" } : v))}>
+                <option value="true">active</option>
+                <option value="false">inactive</option>
+              </select>
+            </FormField>
           </div>
         ) : null}
       </ConfirmDialog>

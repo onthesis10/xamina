@@ -1,7 +1,7 @@
 use std::{
     fs::{self, File},
     io::BufWriter,
-    path::PathBuf,
+    path::{Path, PathBuf},
 };
 
 use chrono::{Datelike, Utc};
@@ -92,6 +92,32 @@ impl CertificateService {
             .await
     }
 
+    pub async fn download_my_certificate_pdf(
+        &self,
+        tenant_id: Uuid,
+        student_id: Uuid,
+        certificate_id: Uuid,
+    ) -> Result<(String, Vec<u8>), CoreError> {
+        let row = self
+            .repo
+            .find_download_for_student_by_id(tenant_id, student_id, certificate_id)
+            .await?
+            .ok_or_else(|| CoreError::not_found("NOT_FOUND", "Certificate not found"))?;
+
+        let target_path = Self::resolve_uploads_path(&row.file_path);
+        let bytes = fs::read(&target_path).map_err(|_| {
+            CoreError::internal("CERTIFICATE_DOWNLOAD_FAILED", "Failed to read certificate PDF")
+        })?;
+        if bytes.is_empty() {
+            return Err(CoreError::internal(
+                "CERTIFICATE_DOWNLOAD_FAILED",
+                "Certificate PDF is empty",
+            ));
+        }
+
+        Ok((row.certificate_no, bytes))
+    }
+
     pub async fn issue_for_submission(
         &self,
         tenant_id: Uuid,
@@ -180,6 +206,41 @@ impl CertificateService {
             now.day(),
             &certificate_id.to_string()[..8]
         )
+    }
+
+    fn resolve_uploads_dir() -> PathBuf {
+        if let Ok(value) = std::env::var("XAMINA_UPLOADS_DIR") {
+            let trimmed = value.trim();
+            if !trimmed.is_empty() {
+                return PathBuf::from(trimmed);
+            }
+        }
+
+        let default_dir = PathBuf::from("uploads");
+        if default_dir.is_dir() {
+            return default_dir;
+        }
+
+        let fallback_dir = PathBuf::from("xamina-backend").join("uploads");
+        if fallback_dir.is_dir() {
+            return fallback_dir;
+        }
+
+        default_dir
+    }
+
+    fn resolve_uploads_path(relative_path: &str) -> PathBuf {
+        let path = Path::new(relative_path);
+        if path.is_absolute() {
+            return path.to_path_buf();
+        }
+
+        let uploads_dir = Self::resolve_uploads_dir();
+        let trimmed = relative_path
+            .strip_prefix("uploads/")
+            .or_else(|| relative_path.strip_prefix("uploads\\"))
+            .unwrap_or(relative_path);
+        uploads_dir.join(trimmed)
     }
 
     fn render_pdf(

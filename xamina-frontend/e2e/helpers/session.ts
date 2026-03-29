@@ -1,12 +1,13 @@
 import type { Page } from "@playwright/test";
 
-type Role = "admin" | "guru" | "siswa";
+type Role = "admin" | "guru" | "siswa" | "super_admin";
 
 export async function seedAuthSession(page: Page, role: Role) {
   const userNameByRole: Record<Role, string> = {
     admin: "Admin E2E",
     guru: "Guru E2E",
     siswa: "Siswa E2E",
+    super_admin: "Super Admin E2E",
   };
 
   await page.addInitScript(
@@ -14,15 +15,15 @@ export async function seedAuthSession(page: Page, role: Role) {
       const payload = {
         state: {
           user: {
-            id: currentRole === "siswa" ? "student-1" : "teacher-1",
-            tenant_id: "tenant-1",
+            id: currentRole === "siswa" ? "student-1" : currentRole === "super_admin" ? "superadmin-1" : "teacher-1",
+            tenant_id: currentRole === "super_admin" ? "platform" : "tenant-1",
             email: `${currentRole}@xamina.local`,
             name: currentName,
             role: currentRole,
             class_id: currentRole === "siswa" ? "class-1" : null,
           },
-          accessToken: "e2e-access-token",
-          refreshToken: "e2e-refresh-token",
+          accessToken: `e2e-access-token-${currentRole}`,
+          refreshToken: `e2e-refresh-token-${currentRole}`,
         },
         version: 0,
       };

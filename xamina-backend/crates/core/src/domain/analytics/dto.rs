@@ -87,6 +87,12 @@ pub struct ClassResultQuery {
     pub exam_id: Option<Uuid>,
 }
 
+#[derive(Debug, Clone, Deserialize)]
+pub struct ExamInsightsQuery {
+    pub exam_id: Option<Uuid>,
+    pub class_id: Option<Uuid>,
+}
+
 #[derive(Debug, Clone, Serialize)]
 pub struct PageMeta {
     pub page: i64,
@@ -106,4 +112,50 @@ pub struct ClassResultRow {
     pub avg_score: f64,
     pub pass_rate: f64,
     pub last_submission_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct ExamInsightsSummaryDto {
+    pub exam_id: Uuid,
+    pub exam_title: String,
+    pub pass_score: i32,
+    pub submission_count: i64,
+    pub avg_score: f64,
+    pub pass_rate: f64,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct ScoreDistributionBinDto {
+    pub label: String,
+    pub lower_bound: i32,
+    pub upper_bound: i32,
+    pub count: i64,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct TimeSeriesPerformancePointDto {
+    pub day: NaiveDate,
+    pub submissions: i64,
+    pub avg_score: f64,
+    pub pass_rate: f64,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct ItemAnalysisRowDto {
+    pub question_id: Uuid,
+    pub question_type: String,
+    pub question_content: String,
+    pub total_attempts: i64,
+    pub correct_attempts: i64,
+    pub p_value: f64,
+    pub point_biserial: Option<f64>,
+    pub recommendations: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct ExamInsightsDto {
+    pub summary: ExamInsightsSummaryDto,
+    pub distribution: Vec<ScoreDistributionBinDto>,
+    pub time_series: Vec<TimeSeriesPerformancePointDto>,
+    pub item_analysis: Vec<ItemAnalysisRowDto>,
 }

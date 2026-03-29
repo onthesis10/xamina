@@ -1,0 +1,1174 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Xamina — Design System v1.0</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,700;0,9..144,900;1,9..144,300&display=swap" rel="stylesheet">
+
+<style>
+/* ─── RESET & BASE ─────────────────────────────────────────────────────── */
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth;font-size:14px}
+
+/* ─── THEME VARS ──────────────────────────────────────────────────────── */
+:root{
+  --bg-0:#FDFAF6;
+  --bg-1:#F8F3EC;
+  --bg-2:#F2EAE0;
+  --bg-3:#EDE1D3;
+  --card:#FFFFFF;
+  --card-hover:#FDFAF6;
+  --border:#EAE0D4;
+  --border-strong:#D9CCB8;
+  --text-0:#1C0F00;
+  --text-1:#5C3D1E;
+  --text-2:#9C7A58;
+  --text-3:#C4A882;
+  --primary:#FF6B00;
+  --primary-2:#FF8C35;
+  --primary-3:#FFB066;
+  --primary-bg:#FFF3EA;
+  --primary-border:#FFD4A8;
+  --success:#16A34A;
+  --success-bg:#DCFCE7;
+  --warning:#CA8A04;
+  --warning-bg:#FEF9C3;
+  --danger:#DC2626;
+  --danger-bg:#FEE2E2;
+  --info:#2563EB;
+  --info-bg:#DBEAFE;
+  --violet:#7C3AED;
+  --violet-bg:#EDE9FE;
+  --teal:#0D9488;
+  --teal-bg:#CCFBF1;
+  --shadow-sm:0 1px 4px rgba(255,107,0,0.06),0 1px 2px rgba(0,0,0,0.04);
+  --shadow:0 2px 12px rgba(255,107,0,0.08),0 1px 4px rgba(0,0,0,0.05);
+  --shadow-lg:0 8px 32px rgba(255,107,0,0.12),0 2px 8px rgba(0,0,0,0.06);
+  --radius-sm:6px;--radius:10px;--radius-lg:16px;--radius-xl:24px;
+  --sidebar-w:240px;
+}
+
+[data-mode="dark"]{
+  --bg-0:#0D0700;
+  --bg-1:#130B01;
+  --bg-2:#1A1003;
+  --bg-3:#221606;
+  --card:#1A1003;
+  --card-hover:#221606;
+  --border:#2A1A08;
+  --border-strong:#3D2810;
+  --text-0:#FFF4E8;
+  --text-1:#D4956A;
+  --text-2:#8A5A38;
+  --text-3:#5A3A20;
+  --primary:#FF7A1A;
+  --primary-2:#FF9A45;
+  --primary-3:#FFB870;
+  --primary-bg:#1F0E00;
+  --primary-border:#4A2200;
+  --success:#4ADE80;
+  --success-bg:#052E16;
+  --warning:#FCD34D;
+  --warning-bg:#1C1200;
+  --danger:#F87171;
+  --danger-bg:#2D0000;
+  --info:#93C5FD;
+  --info-bg:#1E1B4B;
+  --violet:#C4B5FD;
+  --violet-bg:#2E1065;
+  --teal:#5EEAD4;
+  --teal-bg:#042F2E;
+  --shadow-sm:0 1px 4px rgba(0,0,0,0.4),0 1px 2px rgba(0,0,0,0.3);
+  --shadow:0 2px 12px rgba(0,0,0,0.5),0 1px 4px rgba(0,0,0,0.3);
+  --shadow-lg:0 8px 32px rgba(0,0,0,0.6),0 2px 8px rgba(0,0,0,0.4);
+}
+
+[data-mode="fun"]{
+  --bg-0:#FFF8F0;
+  --bg-1:#FFF0E0;
+  --bg-2:#FFE4C8;
+  --bg-3:#FFD4A8;
+  --card:#FFFFFF;
+  --card-hover:#FFF8F0;
+  --border:#FFD4A8;
+  --border-strong:#FFB870;
+  --text-0:#1A0800;
+  --text-1:#8B3A00;
+  --text-2:#C46000;
+  --text-3:#E89040;
+  --primary:#FF4500;
+  --primary-2:#FF6B00;
+  --primary-3:#FF9A3C;
+  --primary-bg:#FFF0E8;
+  --primary-border:#FFB870;
+  --success:#059669;
+  --success-bg:#D1FAE5;
+  --warning:#B45309;
+  --warning-bg:#FEF3C7;
+  --danger:#BE123C;
+  --danger-bg:#FFE4E6;
+  --info:#1D4ED8;
+  --info-bg:#EFF6FF;
+  --violet:#6D28D9;
+  --violet-bg:#EDE9FE;
+  --teal:#0F766E;
+  --teal-bg:#CCFBF1;
+  --shadow-sm:0 2px 8px rgba(255,69,0,0.15),0 1px 3px rgba(255,107,0,0.1);
+  --shadow:0 4px 16px rgba(255,69,0,0.2),0 2px 6px rgba(255,107,0,0.12);
+  --shadow-lg:0 12px 40px rgba(255,69,0,0.25),0 4px 12px rgba(255,107,0,0.15);
+}
+
+/* ─── LAYOUT ──────────────────────────────────────────────────────────── */
+body{background:var(--bg-0);color:var(--text-0);font-family:'Plus Jakarta Sans',sans-serif;min-height:100vh;transition:background 0.3s,color 0.3s}
+.layout{display:flex;min-height:100vh}
+
+/* ─── SIDEBAR ─────────────────────────────────────────────────────────── */
+.sidebar{
+  width:var(--sidebar-w);min-width:var(--sidebar-w);
+  background:var(--card);border-right:1px solid var(--border);
+  display:flex;flex-direction:column;position:sticky;top:0;height:100vh;
+  overflow-y:auto;transition:background 0.3s,border-color 0.3s
+}
+.sidebar::-webkit-scrollbar{width:0}
+.sb-logo{padding:20px 18px 16px;border-bottom:1px solid var(--border)}
+.sb-nav{padding:12px 10px;flex:1}
+.sb-section{font-size:9px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--text-3);padding:10px 10px 6px;font-family:'JetBrains Mono',monospace}
+.sb-item{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:8px;font-size:12px;font-weight:500;color:var(--text-1);cursor:pointer;border:none;background:transparent;width:100%;text-align:left;transition:all 0.15s;text-decoration:none}
+.sb-item:hover{background:var(--primary-bg);color:var(--primary)}
+.sb-item.active{background:var(--primary-bg);color:var(--primary);font-weight:700}
+.sb-item .dot{width:6px;height:6px;border-radius:3px;background:var(--border-strong);flex-shrink:0;margin-left:auto;transition:background 0.15s}
+.sb-item.active .dot{background:var(--primary)}
+.sb-footer{padding:12px 10px;border-top:1px solid var(--border)}
+
+/* ─── MAIN ────────────────────────────────────────────────────────────── */
+.main{flex:1;overflow:hidden}
+.topbar{
+  position:sticky;top:0;z-index:100;
+  background:var(--card);border-bottom:1px solid var(--border);
+  padding:0 32px;height:52px;display:flex;align-items:center;gap:12px;
+  backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+  transition:background 0.3s,border-color 0.3s
+}
+.tb-breadcrumb{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-2)}
+.tb-breadcrumb .sep{color:var(--text-3)}
+.tb-breadcrumb .current{color:var(--text-0);font-weight:600}
+.content{padding:36px 32px 80px;max-width:1100px}
+
+/* ─── MODE TOGGLE ─────────────────────────────────────────────────────── */
+.mode-toggle{display:flex;gap:4px;padding:4px;background:var(--bg-1);border:1px solid var(--border);border-radius:10px;margin-left:auto}
+.mode-btn{padding:5px 12px;border:none;border-radius:7px;font-size:11px;font-weight:700;cursor:pointer;transition:all 0.2s;font-family:'Plus Jakarta Sans',sans-serif;color:var(--text-2);background:transparent}
+.mode-btn.active{background:var(--card);color:var(--primary);box-shadow:var(--shadow-sm)}
+.version-badge{padding:3px 10px;border-radius:20px;background:var(--primary-bg);border:1px solid var(--primary-border);color:var(--primary);font-size:10px;font-weight:700;font-family:'JetBrains Mono',monospace}
+
+/* ─── SECTION HEADER ──────────────────────────────────────────────────── */
+.section-header{margin-bottom:32px}
+.section-eyebrow{font-size:10px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--primary);font-family:'JetBrains Mono',monospace;margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.section-eyebrow::after{content:'';flex:1;height:1px;background:var(--border)}
+.section-title{font-family:'Fraunces',serif;font-size:34px;font-weight:900;color:var(--text-0);letter-spacing:-0.03em;line-height:1.1;margin-bottom:10px}
+.section-title em{color:var(--primary);font-style:italic}
+.section-desc{font-size:14px;color:var(--text-1);line-height:1.8;max-width:600px}
+
+/* ─── CARDS ───────────────────────────────────────────────────────────── */
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius-lg);transition:all 0.2s;box-shadow:var(--shadow-sm)}
+.card:hover{box-shadow:var(--shadow);border-color:var(--border-strong)}
+.card-p{padding:22px}
+
+/* ─── DIVIDER ─────────────────────────────────────────────────────────── */
+.divider{height:1px;background:var(--border);margin:40px 0}
+
+/* ─── LOGO SECTION ────────────────────────────────────────────────────── */
+.logo-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:20px}
+.logo-card{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:36px 20px;border-radius:var(--radius-lg);border:1px solid var(--border);min-height:160px;position:relative}
+.logo-card-label{font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-3);font-family:'JetBrains Mono',monospace}
+.logo-card.bg-light{background:#FDFAF6}
+.logo-card.bg-dark{background:#0D0700}
+.logo-card.bg-orange{background:linear-gradient(135deg,#FF6B00,#FF9A3C)}
+
+/* ─── COLOR PALETTE ───────────────────────────────────────────────────── */
+.palette-row{display:flex;gap:0;border-radius:var(--radius-lg);overflow:hidden;height:72px;margin-bottom:16px;box-shadow:var(--shadow-sm)}
+.palette-swatch{flex:1;display:flex;align-items:flex-end;padding:6px 8px;cursor:pointer;transition:flex 0.2s;position:relative}
+.palette-swatch:hover{flex:1.5}
+.swatch-label{font-size:9px;font-weight:700;color:rgba(255,255,255,0.7);font-family:'JetBrains Mono',monospace;white-space:nowrap;opacity:0;transition:opacity 0.15s}
+.palette-swatch:hover .swatch-label{opacity:1}
+.color-tokens{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:24px}
+.token-card{border-radius:var(--radius);overflow:hidden;border:1px solid var(--border);cursor:pointer;transition:transform 0.15s,box-shadow 0.15s}
+.token-card:hover{transform:translateY(-2px);box-shadow:var(--shadow)}
+.token-swatch{height:60px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;font-family:'JetBrains Mono',monospace}
+.token-info{background:var(--card);padding:8px 10px}
+.token-name{font-size:11px;font-weight:700;color:var(--text-0);margin-bottom:1px}
+.token-hex{font-size:10px;color:var(--text-2);font-family:'JetBrains Mono',monospace}
+
+/* ─── TYPOGRAPHY ──────────────────────────────────────────────────────── */
+.type-specimen{padding:24px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius-lg);margin-bottom:12px}
+.type-meta{display:flex;gap:8px;align-items:center;margin-bottom:12px}
+.type-badge{padding:3px 8px;border-radius:5px;font-size:9px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;font-family:'JetBrains Mono',monospace}
+.type-scale{display:flex;flex-direction:column;gap:0}
+.type-row{display:flex;align-items:baseline;gap:16px;padding:8px 0;border-bottom:1px solid var(--border)}
+.type-row:last-child{border-bottom:none}
+.type-label{font-size:9px;font-weight:700;color:var(--text-3);font-family:'JetBrains Mono',monospace;width:80px;flex-shrink:0}
+.type-sample{color:var(--text-0)}
+.type-detail{font-size:9px;color:var(--text-3);font-family:'JetBrains Mono',monospace;margin-left:auto;white-space:nowrap}
+
+/* ─── SPACING ─────────────────────────────────────────────────────────── */
+.spacing-row{display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid var(--border)}
+.spacing-row:last-child{border-bottom:none}
+.spacing-bar{background:linear-gradient(90deg,var(--primary),var(--primary-3));border-radius:4px;height:12px;transition:width 0.3s}
+.spacing-label{font-size:10px;font-weight:700;font-family:'JetBrains Mono',monospace;color:var(--text-0);width:60px}
+.spacing-val{font-size:10px;color:var(--text-2);font-family:'JetBrains Mono',monospace;width:40px}
+.spacing-desc{font-size:11px;color:var(--text-1)}
+
+/* ─── COMPONENTS ──────────────────────────────────────────────────────── */
+.comp-section{margin-bottom:28px}
+.comp-label{font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-2);font-family:'JetBrains Mono',monospace;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.comp-label::after{content:'';flex:1;height:1px;background:var(--border)}
+.comp-row{display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding:20px;background:var(--bg-1);border-radius:var(--radius-lg);border:1px solid var(--border)}
+
+/* ─── BUTTONS ─────────────────────────────────────────────────────────── */
+.btn{display:inline-flex;align-items:center;gap:7px;padding:8px 18px;border-radius:var(--radius);font-size:13px;font-weight:700;cursor:pointer;border:none;font-family:'Plus Jakarta Sans',sans-serif;transition:all 0.2s;white-space:nowrap}
+.btn svg{flex-shrink:0}
+.btn-primary{background:var(--primary);color:#fff;box-shadow:0 2px 8px rgba(255,107,0,0.3)}
+.btn-primary:hover{background:var(--primary-2);box-shadow:0 4px 16px rgba(255,107,0,0.4);transform:translateY(-1px)}
+.btn-secondary{background:var(--primary-bg);color:var(--primary);border:1px solid var(--primary-border)}
+.btn-secondary:hover{background:var(--primary-border)}
+.btn-ghost{background:transparent;color:var(--text-1);border:1px solid var(--border)}
+.btn-ghost:hover{background:var(--bg-2);color:var(--text-0)}
+.btn-success{background:var(--success);color:#fff}
+.btn-danger{background:var(--danger);color:#fff}
+.btn-sm{padding:5px 12px;font-size:11px;border-radius:7px}
+.btn-lg{padding:12px 24px;font-size:15px;border-radius:12px}
+.btn-icon{padding:8px;border-radius:var(--radius)}
+
+/* ─── BADGES ──────────────────────────────────────────────────────────── */
+.badge{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:20px;font-size:10px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;font-family:'JetBrains Mono',monospace}
+.badge-orange{background:var(--primary-bg);color:var(--primary);border:1px solid var(--primary-border)}
+.badge-green{background:var(--success-bg);color:var(--success);border:1px solid rgba(22,163,74,0.2)}
+.badge-yellow{background:var(--warning-bg);color:var(--warning);border:1px solid rgba(202,138,4,0.2)}
+.badge-red{background:var(--danger-bg);color:var(--danger);border:1px solid rgba(220,38,38,0.2)}
+.badge-blue{background:var(--info-bg);color:var(--info);border:1px solid rgba(37,99,235,0.2)}
+.badge-violet{background:var(--violet-bg);color:var(--violet);border:1px solid rgba(124,58,237,0.2)}
+
+/* ─── INPUTS ──────────────────────────────────────────────────────────── */
+.inp-wrap{display:flex;flex-direction:column;gap:5px;width:220px}
+.inp-label{font-size:11px;font-weight:700;color:var(--text-1)}
+.inp{padding:9px 12px;border:1.5px solid var(--border);border-radius:var(--radius);background:var(--card);color:var(--text-0);font-size:13px;font-family:'Plus Jakarta Sans',sans-serif;outline:none;transition:all 0.2s;width:100%}
+.inp:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(255,107,0,0.12)}
+.inp::placeholder{color:var(--text-3)}
+.inp-error{border-color:var(--danger)}
+.inp-error:focus{box-shadow:0 0 0 3px rgba(220,38,38,0.12)}
+.inp-icon-wrap{position:relative}
+.inp-icon-wrap .inp{padding-left:36px}
+.inp-icon-wrap .icon-left{position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--text-3);pointer-events:none}
+
+/* ─── CARDS COMPONENTS ────────────────────────────────────────────────── */
+.stat-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:18px;display:flex;flex-direction:column;gap:8px;transition:all 0.2s;box-shadow:var(--shadow-sm);cursor:default}
+.stat-card:hover{box-shadow:var(--shadow);transform:translateY(-2px)}
+.stat-icon{width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center}
+.stat-value{font-size:26px;font-weight:800;color:var(--text-0);font-family:'Fraunces',serif;line-height:1}
+.stat-label{font-size:11px;color:var(--text-2)}
+.stat-trend{display:flex;align-items:center;gap:3px;font-size:11px;font-weight:700}
+.trend-up{color:var(--success)}
+.trend-down{color:var(--danger)}
+
+/* ─── AVATAR ──────────────────────────────────────────────────────────── */
+.av{border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0}
+.av-stack{display:flex}
+.av-stack .av{margin-left:-8px;border:2px solid var(--card)}
+.av-stack .av:first-child{margin-left:0}
+
+/* ─── PROGRESS ────────────────────────────────────────────────────────── */
+.progress-wrap{display:flex;flex-direction:column;gap:4px}
+.progress-track{height:8px;background:var(--bg-2);border-radius:99px;overflow:hidden}
+.progress-bar{height:100%;border-radius:99px;transition:width 0.6s cubic-bezier(0.65,0,0.35,1)}
+
+/* ─── TOAST ───────────────────────────────────────────────────────────── */
+.toast{display:flex;align-items:center;gap:10px;padding:12px 16px;border-radius:var(--radius-lg);border:1px solid;font-size:13px;max-width:340px;box-shadow:var(--shadow-lg)}
+.toast-success{background:var(--success-bg);border-color:rgba(22,163,74,0.25);color:var(--success)}
+.toast-error{background:var(--danger-bg);border-color:rgba(220,38,38,0.25);color:var(--danger)}
+.toast-info{background:var(--info-bg);border-color:rgba(37,99,235,0.25);color:var(--info)}
+.toast-warn{background:var(--warning-bg);border-color:rgba(202,138,4,0.25);color:var(--warning)}
+
+/* ─── TABLE ───────────────────────────────────────────────────────────── */
+.tbl{width:100%;border-collapse:collapse}
+.tbl th{padding:10px 14px;font-size:10px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-2);text-align:left;font-family:'JetBrains Mono',monospace;border-bottom:2px solid var(--border)}
+.tbl td{padding:11px 14px;font-size:12px;color:var(--text-0);border-bottom:1px solid var(--border)}
+.tbl tr:last-child td{border-bottom:none}
+.tbl tr:hover td{background:var(--primary-bg)}
+
+/* ─── TABS ────────────────────────────────────────────────────────────── */
+.tab-bar{display:flex;gap:4px;padding:4px;background:var(--bg-1);border:1px solid var(--border);border-radius:12px;margin-bottom:20px;flex-wrap:wrap}
+.tab-btn{padding:6px 16px;border:none;border-radius:9px;font-size:12px;font-weight:600;cursor:pointer;transition:all 0.2s;font-family:'Plus Jakarta Sans',sans-serif;color:var(--text-2);background:transparent}
+.tab-btn:hover{color:var(--text-0);background:var(--bg-2)}
+.tab-btn.active{background:var(--card);color:var(--primary);font-weight:700;box-shadow:var(--shadow-sm)}
+.tab-content{display:none}
+.tab-content.active{display:block}
+
+/* ─── GRID HELPERS ────────────────────────────────────────────────────── */
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}
+.g4{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:12px}
+.g5{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}
+.flex{display:flex}.flex-col{flex-direction:column}.gap-8{gap:8px}.gap-12{gap:12px}.gap-16{gap:16px}.gap-20{gap:20px}.gap-24{gap:24px}
+.items-center{align-items:center}.justify-between{justify-content:space-between}
+.mb-8{margin-bottom:8px}.mb-12{margin-bottom:12px}.mb-16{margin-bottom:16px}.mb-20{margin-bottom:20px}.mb-24{margin-bottom:24px}.mb-32{margin-bottom:32px}
+
+/* ─── COPIED TOAST ────────────────────────────────────────────────────── */
+.copied-hint{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--text-0);color:var(--bg-0);padding:8px 18px;border-radius:20px;font-size:12px;font-weight:600;opacity:0;transition:all 0.3s;z-index:9999;pointer-events:none}
+.copied-hint.show{transform:translateX(-50%) translateY(0);opacity:1}
+
+/* ─── ICON HELPER ─────────────────────────────────────────────────────── */
+.ic{display:inline-flex;flex-shrink:0}
+
+/* ─── SCROLLBAR ───────────────────────────────────────────────────────── */
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-thumb{background:var(--border-strong);border-radius:4px}
+::-webkit-scrollbar-track{background:transparent}
+
+/* ─── ANIMATIONS ──────────────────────────────────────────────────────── */
+@keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+.fade-up{animation:fadeUp 0.5s ease forwards}
+.delay-1{animation-delay:0.1s;opacity:0}
+.delay-2{animation-delay:0.2s;opacity:0}
+.delay-3{animation-delay:0.3s;opacity:0}
+
+/* ─── LOGO WORDMARK ───────────────────────────────────────────────────── */
+.wordmark{font-family:'Fraunces',serif;font-weight:900;letter-spacing:-0.04em;line-height:1}
+.wordmark em{color:var(--primary);font-style:normal}
+
+</style>
+</head>
+<body>
+<div class="layout">
+
+<!-- ═══ SIDEBAR ═══════════════════════════════════════════════════════════ -->
+<aside class="sidebar">
+  <div class="sb-logo">
+    <div class="flex items-center gap-12">
+      <!-- LOGO MARK -->
+      <svg width="36" height="36" viewBox="0 0 40 40" fill="none">
+        <rect width="40" height="40" rx="10" fill="url(#sb-grad)"/>
+        <path d="M11 11L20 20M20 20L29 11M20 20L11 29M20 20L29 29" stroke="white" stroke-width="2.8" stroke-linecap="round"/>
+        <circle cx="20" cy="20" r="3.2" fill="white" fill-opacity="0.95"/>
+        <circle cx="11" cy="11" r="2.4" fill="white" fill-opacity="0.7"/>
+        <circle cx="29" cy="11" r="2.4" fill="white" fill-opacity="0.7"/>
+        <circle cx="11" cy="29" r="2.4" fill="white" fill-opacity="0.7"/>
+        <circle cx="29" cy="29" r="2.4" fill="white" fill-opacity="0.7"/>
+        <defs><linearGradient id="sb-grad" x1="0" y1="0" x2="40" y2="40">
+          <stop stop-color="#FF5500"/><stop offset="1" stop-color="#FF9A3C"/>
+        </linearGradient></defs>
+      </svg>
+      <div>
+        <div class="wordmark" style="font-size:18px;color:var(--text-0)">Xamin<em>a</em></div>
+        <div style="font-size:9px;color:var(--text-3);font-family:'JetBrains Mono',monospace;font-weight:600;letter-spacing:0.1em">DESIGN SYSTEM v1.0</div>
+      </div>
+    </div>
+  </div>
+
+  <nav class="sb-nav">
+    <div class="sb-section">Fondasi</div>
+    <a class="sb-item active" onclick="showSection('overview')">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+      Overview <span class="dot"></span>
+    </a>
+    <a class="sb-item" onclick="showSection('logo')">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><path d="M8.56 2.75c4.37 6.03 6.02 9.42 8.03 17.72m2.54-15.38c-3.72 4.35-8.94 5.66-16.88 5.85m19.5 1.9c-3.5-.93-6.63-.82-8.94 0-2.58.92-5.01 2.86-7.44 6.32"/></svg>
+      Logo System <span class="dot"></span>
+    </a>
+    <a class="sb-item" onclick="showSection('colors')">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/></svg>
+      Color Palette <span class="dot"></span>
+    </a>
+    <a class="sb-item" onclick="showSection('typography')">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></svg>
+      Typography <span class="dot"></span>
+    </a>
+    <a class="sb-item" onclick="showSection('spacing')">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="21" y1="10" x2="3" y2="10"/><line x1="21" y1="6" x2="3" y2="6"/><line x1="21" y1="14" x2="3" y2="14"/><line x1="21" y1="18" x2="3" y2="18"/></svg>
+      Spacing & Grid <span class="dot"></span>
+    </a>
+    <div class="sb-section" style="margin-top:8px">Komponen</div>
+    <a class="sb-item" onclick="showSection('components')">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+      All Components <span class="dot"></span>
+    </a>
+    <div class="sb-section" style="margin-top:8px">Mode</div>
+    <a class="sb-item" onclick="showSection('modes')">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/></svg>
+      Light / Dark / Fun <span class="dot"></span>
+    </a>
+  </nav>
+
+  <div class="sb-footer">
+    <div style="font-size:10px;color:var(--text-3);font-family:'JetBrains Mono',monospace">© 2026 Xamina · v1.0.0</div>
+  </div>
+</aside>
+
+<!-- ═══ MAIN CONTENT ═══════════════════════════════════════════════════════ -->
+<div class="main">
+  <!-- TOPBAR -->
+  <div class="topbar">
+    <div class="tb-breadcrumb">
+      <span>Xamina</span>
+      <span class="sep">/</span>
+      <span class="current" id="breadcrumb-current">Overview</span>
+    </div>
+    <span class="version-badge">v1.0</span>
+    <div class="mode-toggle" style="margin-left:auto">
+      <button class="mode-btn active" onclick="setMode('light',this)">☀️ Light</button>
+      <button class="mode-btn" onclick="setMode('dark',this)">🌙 Dark</button>
+      <button class="mode-btn" onclick="setMode('fun',this)">🎨 Fun</button>
+    </div>
+  </div>
+
+  <div class="content">
+
+  <!-- ═══ SECTION: OVERVIEW ══════════════════════════════════════════════ -->
+  <div id="sec-overview" class="tab-content active fade-up">
+    <div class="section-header">
+      <div class="section-eyebrow">Design System</div>
+      <div class="section-title">Xamina <em>Brand & UI</em><br>Design Language</div>
+      <p class="section-desc">Panduan lengkap untuk membangun produk Xamina yang konsisten, elegan, dan bersemangat. Setiap keputusan desain dibuat dengan tujuan: academic credibility + youthful energy.</p>
+    </div>
+
+    <!-- Brand Values -->
+    <div class="g3 mb-32">
+      <div class="card card-p">
+        <div style="width:44px;height:44px;border-radius:12px;background:var(--primary-bg);display:flex;align-items:center;justify-content:center;margin-bottom:12px;font-size:22px">🎓</div>
+        <div style="font-size:14px;font-weight:800;color:var(--text-0);margin-bottom:6px">Academic Credibility</div>
+        <div style="font-size:12px;color:var(--text-1);line-height:1.7">Desain yang terasa serius, profesional, dan dipercaya oleh guru dan orang tua. Serif font untuk authority.</div>
+      </div>
+      <div class="card card-p">
+        <div style="width:44px;height:44px;border-radius:12px;background:var(--primary-bg);display:flex;align-items:center;justify-content:center;margin-bottom:12px;font-size:22px">⚡</div>
+        <div style="font-size:14px;font-weight:800;color:var(--text-0);margin-bottom:6px">Youthful Energy</div>
+        <div style="font-size:12px;color:var(--text-1);line-height:1.7">Orange yang vibrant, elemen yang dinamis, dan UI yang terasa modern untuk gen Z yang tech-savvy.</div>
+      </div>
+      <div class="card card-p">
+        <div style="width:44px;height:44px;border-radius:12px;background:var(--primary-bg);display:flex;align-items:center;justify-content:center;margin-bottom:12px;font-size:22px">🌶️</div>
+        <div style="font-size:14px;font-weight:800;color:var(--text-0);margin-bottom:6px">Warm Accessibility</div>
+        <div style="font-size:12px;color:var(--text-1);line-height:1.7">Warna hangat yang inklusif dan ramah. Kontras yang cukup untuk readability di semua kondisi cahaya.</div>
+      </div>
+    </div>
+
+    <!-- Quick Reference -->
+    <div style="font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-2);font-family:'JetBrains Mono',monospace;margin-bottom:14px">Quick Reference</div>
+    <div class="card" style="overflow:hidden;margin-bottom:32px">
+      <table class="tbl" style="width:100%">
+        <thead>
+          <tr><th>Token</th><th>Value</th><th>Keterangan</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code style="font-family:'JetBrains Mono',monospace;font-size:11px;background:var(--primary-bg);color:var(--primary);padding:2px 6px;border-radius:4px">--primary</code></td><td style="font-family:'JetBrains Mono',monospace;font-size:11px">#FF6B00</td><td style="font-size:12px;color:var(--text-1)">Brand orange — CTA, active states</td></tr>
+          <tr><td><code style="font-family:'JetBrains Mono',monospace;font-size:11px;background:var(--primary-bg);color:var(--primary);padding:2px 6px;border-radius:4px">font-display</code></td><td style="font-family:'JetBrains Mono',monospace;font-size:11px">Fraunces</td><td style="font-size:12px;color:var(--text-1)">Headlines, hero text, numbers besar</td></tr>
+          <tr><td><code style="font-family:'JetBrains Mono',monospace;font-size:11px;background:var(--primary-bg);color:var(--primary);padding:2px 6px;border-radius:4px">font-body</code></td><td style="font-family:'JetBrains Mono',monospace;font-size:11px">Plus Jakarta Sans</td><td style="font-size:12px;color:var(--text-1)">Body, UI labels, navigasi</td></tr>
+          <tr><td><code style="font-family:'JetBrains Mono',monospace;font-size:11px;background:var(--primary-bg);color:var(--primary);padding:2px 6px;border-radius:4px">font-mono</code></td><td style="font-family:'JetBrains Mono',monospace;font-size:11px">JetBrains Mono</td><td style="font-size:12px;color:var(--text-1)">Kode, badge, data, timestamp</td></tr>
+          <tr><td><code style="font-family:'JetBrains Mono',monospace;font-size:11px;background:var(--primary-bg);color:var(--primary);padding:2px 6px;border-radius:4px">--radius-lg</code></td><td style="font-family:'JetBrains Mono',monospace;font-size:11px">16px</td><td style="font-size:12px;color:var(--text-1)">Card radius utama</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ═══ SECTION: LOGO ═════════════════════════════════════════════════ -->
+  <div id="sec-logo" class="tab-content">
+    <div class="section-header">
+      <div class="section-eyebrow">Logo System</div>
+      <div class="section-title">Xamina <em>Mark</em> &<br>Wordmark</div>
+      <p class="section-desc">Logo Xamina adalah network node yang saling terhubung — merepresentasikan koneksi antara guru, siswa, dan pengetahuan. Simetris, tegas, dan modern.</p>
+    </div>
+
+    <!-- Logo Variants -->
+    <div style="font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-2);font-family:'JetBrains Mono',monospace;margin-bottom:14px">Logo Variants</div>
+    <div class="logo-grid mb-32">
+      <!-- Full Logo Light BG -->
+      <div class="logo-card bg-light" style="border:1px solid var(--border)">
+        <div class="flex items-center gap-12">
+          <svg width="48" height="48" viewBox="0 0 40 40" fill="none">
+            <rect width="40" height="40" rx="10" fill="url(#lg1)"/>
+            <path d="M11 11L20 20M20 20L29 11M20 20L11 29M20 20L29 29" stroke="white" stroke-width="2.8" stroke-linecap="round"/>
+            <circle cx="20" cy="20" r="3.2" fill="white" fill-opacity="0.95"/>
+            <circle cx="11" cy="11" r="2.4" fill="white" fill-opacity="0.7"/>
+            <circle cx="29" cy="11" r="2.4" fill="white" fill-opacity="0.7"/>
+            <circle cx="11" cy="29" r="2.4" fill="white" fill-opacity="0.7"/>
+            <circle cx="29" cy="29" r="2.4" fill="white" fill-opacity="0.7"/>
+            <defs><linearGradient id="lg1" x1="0" y1="0" x2="40" y2="40"><stop stop-color="#FF5500"/><stop offset="1" stop-color="#FF9A3C"/></linearGradient></defs>
+          </svg>
+          <div class="wordmark" style="font-size:26px;color:#1C0F00">Xamin<span style="color:#FF6B00">a</span></div>
+        </div>
+        <div class="logo-card-label">Full — Light Background</div>
+      </div>
+
+      <!-- Full Logo Dark BG -->
+      <div class="logo-card bg-dark">
+        <div class="flex items-center gap-12">
+          <svg width="48" height="48" viewBox="0 0 40 40" fill="none">
+            <rect width="40" height="40" rx="10" fill="url(#lg2)"/>
+            <path d="M11 11L20 20M20 20L29 11M20 20L11 29M20 20L29 29" stroke="white" stroke-width="2.8" stroke-linecap="round"/>
+            <circle cx="20" cy="20" r="3.2" fill="white" fill-opacity="0.95"/>
+            <circle cx="11" cy="11" r="2.4" fill="white" fill-opacity="0.7"/>
+            <circle cx="29" cy="11" r="2.4" fill="white" fill-opacity="0.7"/>
+            <circle cx="11" cy="29" r="2.4" fill="white" fill-opacity="0.7"/>
+            <circle cx="29" cy="29" r="2.4" fill="white" fill-opacity="0.7"/>
+            <defs><linearGradient id="lg2" x1="0" y1="0" x2="40" y2="40"><stop stop-color="#FF5500"/><stop offset="1" stop-color="#FF9A3C"/></linearGradient></defs>
+          </svg>
+          <div class="wordmark" style="font-size:26px;color:#FFF4E8">Xamin<span style="color:#FF7A1A">a</span></div>
+        </div>
+        <div class="logo-card-label" style="color:rgba(255,244,232,0.4)">Full — Dark Background</div>
+      </div>
+
+      <!-- Logo on Orange -->
+      <div class="logo-card bg-orange">
+        <div class="flex items-center gap-12">
+          <svg width="48" height="48" viewBox="0 0 40 40" fill="none">
+            <rect width="40" height="40" rx="10" fill="rgba(255,255,255,0.2)" stroke="rgba(255,255,255,0.3)" stroke-width="1"/>
+            <path d="M11 11L20 20M20 20L29 11M20 20L11 29M20 20L29 29" stroke="white" stroke-width="2.8" stroke-linecap="round"/>
+            <circle cx="20" cy="20" r="3.2" fill="white"/>
+            <circle cx="11" cy="11" r="2.4" fill="white" fill-opacity="0.8"/>
+            <circle cx="29" cy="11" r="2.4" fill="white" fill-opacity="0.8"/>
+            <circle cx="11" cy="29" r="2.4" fill="white" fill-opacity="0.8"/>
+            <circle cx="29" cy="29" r="2.4" fill="white" fill-opacity="0.8"/>
+          </svg>
+          <div class="wordmark" style="font-size:26px;color:white">Xamin<span style="color:rgba(255,255,255,0.7)">a</span></div>
+        </div>
+        <div class="logo-card-label" style="color:rgba(255,255,255,0.6)">Full — Brand Background</div>
+      </div>
+    </div>
+
+    <!-- Mark Sizes -->
+    <div style="font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-2);font-family:'JetBrains Mono',monospace;margin-bottom:14px">Mark — Semua Ukuran</div>
+    <div class="card card-p mb-32">
+      <div class="flex items-center gap-20" style="flex-wrap:wrap">
+        {[16,24,32,40,48,64,80].map ? null : ''}
+        <!-- 16px favicon -->
+        <div class="flex flex-col items-center gap-8">
+          <svg width="16" height="16" viewBox="0 0 40 40" fill="none"><rect width="40" height="40" rx="8" fill="url(#m1)"/><path d="M11 11L20 20M20 20L29 11M20 20L11 29M20 20L29 29" stroke="white" stroke-width="3.5" stroke-linecap="round"/><circle cx="20" cy="20" r="3" fill="white"/><defs><linearGradient id="m1" x1="0" y1="0" x2="40" y2="40"><stop stop-color="#FF5500"/><stop offset="1" stop-color="#FF9A3C"/></linearGradient></defs></svg>
+          <span style="font-size:9px;font-family:'JetBrains Mono',monospace;color:var(--text-3)">16</span>
+        </div>
+        <div class="flex flex-col items-center gap-8">
+          <svg width="24" height="24" viewBox="0 0 40 40" fill="none"><rect width="40" height="40" rx="9" fill="url(#m2)"/><path d="M11 11L20 20M20 20L29 11M20 20L11 29M20 20L29 29" stroke="white" stroke-width="3.2" stroke-linecap="round"/><circle cx="20" cy="20" r="3" fill="white"/><defs><linearGradient id="m2" x1="0" y1="0" x2="40" y2="40"><stop stop-color="#FF5500"/><stop offset="1" stop-color="#FF9A3C"/></linearGradient></defs></svg>
+          <span style="font-size:9px;font-family:'JetBrains Mono',monospace;color:var(--text-3)">24</span>
+        </div>
+        <div class="flex flex-col items-center gap-8">
+          <svg width="32" height="32" viewBox="0 0 40 40" fill="none"><rect width="40" height="40" rx="10" fill="url(#m3)"/><path d="M11 11L20 20M20 20L29 11M20 20L11 29M20 20L29 29" stroke="white" stroke-width="2.8" stroke-linecap="round"/><circle cx="20" cy="20" r="3" fill="white"/><circle cx="11" cy="11" r="2" fill="white" fill-opacity="0.7"/><circle cx="29" cy="11" r="2" fill="white" fill-opacity="0.7"/><circle cx="11" cy="29" r="2" fill="white" fill-opacity="0.7"/><circle cx="29" cy="29" r="2" fill="white" fill-opacity="0.7"/><defs><linearGradient id="m3" x1="0" y1="0" x2="40" y2="40"><stop stop-color="#FF5500"/><stop offset="1" stop-color="#FF9A3C"/></linearGradient></defs></svg>
+          <span style="font-size:9px;font-family:'JetBrains Mono',monospace;color:var(--text-3)">32</span>
+        </div>
+        <div class="flex flex-col items-center gap-8">
+          <svg width="48" height="48" viewBox="0 0 40 40" fill="none"><rect width="40" height="40" rx="10" fill="url(#m4)"/><path d="M11 11L20 20M20 20L29 11M20 20L11 29M20 20L29 29" stroke="white" stroke-width="2.8" stroke-linecap="round"/><circle cx="20" cy="20" r="3.2" fill="white" fill-opacity="0.95"/><circle cx="11" cy="11" r="2.4" fill="white" fill-opacity="0.7"/><circle cx="29" cy="11" r="2.4" fill="white" fill-opacity="0.7"/><circle cx="11" cy="29" r="2.4" fill="white" fill-opacity="0.7"/><circle cx="29" cy="29" r="2.4" fill="white" fill-opacity="0.7"/><defs><linearGradient id="m4" x1="0" y1="0" x2="40" y2="40"><stop stop-color="#FF5500"/><stop offset="1" stop-color="#FF9A3C"/></linearGradient></defs></svg>
+          <span style="font-size:9px;font-family:'JetBrains Mono',monospace;color:var(--text-3)">48</span>
+        </div>
+        <div class="flex flex-col items-center gap-8">
+          <svg width="64" height="64" viewBox="0 0 40 40" fill="none"><rect width="40" height="40" rx="10" fill="url(#m5)"/><path d="M11 11L20 20M20 20L29 11M20 20L11 29M20 20L29 29" stroke="white" stroke-width="2.8" stroke-linecap="round"/><circle cx="20" cy="20" r="3.2" fill="white" fill-opacity="0.95"/><circle cx="11" cy="11" r="2.4" fill="white" fill-opacity="0.7"/><circle cx="29" cy="11" r="2.4" fill="white" fill-opacity="0.7"/><circle cx="11" cy="29" r="2.4" fill="white" fill-opacity="0.7"/><circle cx="29" cy="29" r="2.4" fill="white" fill-opacity="0.7"/><defs><linearGradient id="m5" x1="0" y1="0" x2="40" y2="40"><stop stop-color="#FF5500"/><stop offset="1" stop-color="#FF9A3C"/></linearGradient></defs></svg>
+          <span style="font-size:9px;font-family:'JetBrains Mono',monospace;color:var(--text-3)">64</span>
+        </div>
+        <div class="flex flex-col items-center gap-8">
+          <svg width="80" height="80" viewBox="0 0 40 40" fill="none"><rect width="40" height="40" rx="10" fill="url(#m6)"/><path d="M11 11L20 20M20 20L29 11M20 20L11 29M20 20L29 29" stroke="white" stroke-width="2.8" stroke-linecap="round"/><circle cx="20" cy="20" r="3.2" fill="white" fill-opacity="0.95"/><circle cx="11" cy="11" r="2.4" fill="white" fill-opacity="0.7"/><circle cx="29" cy="11" r="2.4" fill="white" fill-opacity="0.7"/><circle cx="11" cy="29" r="2.4" fill="white" fill-opacity="0.7"/><circle cx="29" cy="29" r="2.4" fill="white" fill-opacity="0.7"/><defs><linearGradient id="m6" x1="0" y1="0" x2="40" y2="40"><stop stop-color="#FF5500"/><stop offset="1" stop-color="#FF9A3C"/></linearGradient></defs></svg>
+          <span style="font-size:9px;font-family:'JetBrains Mono',monospace;color:var(--text-3)">80</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Logo Rules -->
+    <div class="g2">
+      <div class="card card-p" style="border-color:var(--success);background:var(--success-bg)">
+        <div style="font-size:11px;font-weight:800;color:var(--success);margin-bottom:10px;text-transform:uppercase;letter-spacing:0.08em">✅ DO — Boleh</div>
+        <ul style="font-size:12px;color:var(--text-0);line-height:2;list-style:none">
+          <li>↗ Gunakan di background putih/krem/gelap</li>
+          <li>↗ Scale secara proporsional</li>
+          <li>↗ Minimum clear space = 1× tinggi mark</li>
+          <li>↗ Versi putih untuk background brand/gelap</li>
+        </ul>
+      </div>
+      <div class="card card-p" style="border-color:var(--danger);background:var(--danger-bg)">
+        <div style="font-size:11px;font-weight:800;color:var(--danger);margin-bottom:10px;text-transform:uppercase;letter-spacing:0.08em">❌ DON'T — Jangan</div>
+        <ul style="font-size:12px;color:var(--text-0);line-height:2;list-style:none">
+          <li>↘ Jangan ubah warna logomark</li>
+          <li>↘ Jangan ubah proporsi/rotasi</li>
+          <li>↘ Jangan gunakan shadow atau outline</li>
+          <li>↘ Jangan tempatkan di background busy</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ SECTION: COLORS ═══════════════════════════════════════════════ -->
+  <div id="sec-colors" class="tab-content">
+    <div class="section-header">
+      <div class="section-eyebrow">Color System</div>
+      <div class="section-title">Palet Warna <em>Xamina</em></div>
+      <p class="section-desc">Klik swatch untuk copy hex code. Palet dibangun dari warm orange sebagai anchor, dengan neutral berbasis krem untuk akademik yang hangat.</p>
+    </div>
+
+    <!-- Primary -->
+    <div style="font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-2);font-family:'JetBrains Mono',monospace;margin-bottom:12px">Primary — Xamina Orange</div>
+    <div class="palette-row mb-16">
+      <div class="palette-swatch" style="background:#FFF3EA" onclick="copyColor('#FFF3EA')"><span class="swatch-label" style="color:#FF6B00">50</span></div>
+      <div class="palette-swatch" style="background:#FFD4A8" onclick="copyColor('#FFD4A8')"><span class="swatch-label" style="color:#FF6B00">100</span></div>
+      <div class="palette-swatch" style="background:#FFB870" onclick="copyColor('#FFB870')"><span class="swatch-label">200</span></div>
+      <div class="palette-swatch" style="background:#FF9A3C" onclick="copyColor('#FF9A3C')"><span class="swatch-label">300</span></div>
+      <div class="palette-swatch" style="background:#FF8020" onclick="copyColor('#FF8020')"><span class="swatch-label">400</span></div>
+      <div class="palette-swatch" style="background:#FF6B00;flex:2;outline:3px solid #FF6B00;outline-offset:2px;border-radius:2px" onclick="copyColor('#FF6B00')"><span class="swatch-label">500 ★</span></div>
+      <div class="palette-swatch" style="background:#E05500" onclick="copyColor('#E05500')"><span class="swatch-label">600</span></div>
+      <div class="palette-swatch" style="background:#C04000" onclick="copyColor('#C04000')"><span class="swatch-label">700</span></div>
+      <div class="palette-swatch" style="background:#8A2E00" onclick="copyColor('#8A2E00')"><span class="swatch-label">800</span></div>
+      <div class="palette-swatch" style="background:#4A1800" onclick="copyColor('#4A1800')"><span class="swatch-label">900</span></div>
+    </div>
+
+    <!-- Neutral Warm -->
+    <div style="font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-2);font-family:'JetBrains Mono',monospace;margin-bottom:12px">Neutral Warm — Krem & Cokelat</div>
+    <div class="palette-row mb-24">
+      <div class="palette-swatch" style="background:#FDFAF6" onclick="copyColor('#FDFAF6')"><span class="swatch-label" style="color:#5C3D1E">50</span></div>
+      <div class="palette-swatch" style="background:#F8F3EC" onclick="copyColor('#F8F3EC')"><span class="swatch-label" style="color:#5C3D1E">100</span></div>
+      <div class="palette-swatch" style="background:#F0E8DF" onclick="copyColor('#F0E8DF')"><span class="swatch-label" style="color:#5C3D1E">200</span></div>
+      <div class="palette-swatch" style="background:#E0CEB8" onclick="copyColor('#E0CEB8')"><span class="swatch-label" style="color:#5C3D1E">300</span></div>
+      <div class="palette-swatch" style="background:#C4A882" onclick="copyColor('#C4A882')"><span class="swatch-label">400</span></div>
+      <div class="palette-swatch" style="background:#9C7A58" onclick="copyColor('#9C7A58')"><span class="swatch-label">500</span></div>
+      <div class="palette-swatch" style="background:#7A5C42" onclick="copyColor('#7A5C42')"><span class="swatch-label">600</span></div>
+      <div class="palette-swatch" style="background:#5C3D1E" onclick="copyColor('#5C3D1E')"><span class="swatch-label">700</span></div>
+      <div class="palette-swatch" style="background:#3A2210" onclick="copyColor('#3A2210')"><span class="swatch-label">800</span></div>
+      <div class="palette-swatch" style="background:#1C0F00" onclick="copyColor('#1C0F00')"><span class="swatch-label">900</span></div>
+    </div>
+
+    <!-- Semantic -->
+    <div style="font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-2);font-family:'JetBrains Mono',monospace;margin-bottom:12px">Semantic Colors</div>
+    <div class="color-tokens">
+      <div class="token-card" onclick="copyColor('#16A34A')">
+        <div class="token-swatch" style="background:#16A34A;color:white">Success</div>
+        <div class="token-info"><div class="token-name">Success</div><div class="token-hex">#16A34A</div></div>
+      </div>
+      <div class="token-card" onclick="copyColor('#CA8A04')">
+        <div class="token-swatch" style="background:#FEF9C3;color:#CA8A04">Warning</div>
+        <div class="token-info"><div class="token-name">Warning</div><div class="token-hex">#CA8A04</div></div>
+      </div>
+      <div class="token-card" onclick="copyColor('#DC2626')">
+        <div class="token-swatch" style="background:#DC2626;color:white">Danger</div>
+        <div class="token-info"><div class="token-name">Danger</div><div class="token-hex">#DC2626</div></div>
+      </div>
+      <div class="token-card" onclick="copyColor('#2563EB')">
+        <div class="token-swatch" style="background:#2563EB;color:white">Info</div>
+        <div class="token-info"><div class="token-name">Info</div><div class="token-hex">#2563EB</div></div>
+      </div>
+      <div class="token-card" onclick="copyColor('#7C3AED')">
+        <div class="token-swatch" style="background:#7C3AED;color:white">Violet</div>
+        <div class="token-info"><div class="token-name">Violet</div><div class="token-hex">#7C3AED</div></div>
+      </div>
+      <div class="token-card" onclick="copyColor('#0D9488')">
+        <div class="token-swatch" style="background:#0D9488;color:white">Teal</div>
+        <div class="token-info"><div class="token-name">Teal</div><div class="token-hex">#0D9488</div></div>
+      </div>
+      <div class="token-card" onclick="copyColor('#DB2777')">
+        <div class="token-swatch" style="background:#DB2777;color:white">Pink</div>
+        <div class="token-info"><div class="token-name">Pink</div><div class="token-hex">#DB2777</div></div>
+      </div>
+      <div class="token-card" onclick="copyColor('#EA580C')">
+        <div class="token-swatch" style="background:linear-gradient(135deg,#FF6B00,#FF9A3C);color:white">Brand</div>
+        <div class="token-info"><div class="token-name">Brand Grad</div><div class="token-hex">#FF6B00→#FF9A3C</div></div>
+      </div>
+      <div class="token-card" onclick="copyColor('#0F0800')">
+        <div class="token-swatch" style="background:#0F0800;color:#FF7A1A">Dark BG</div>
+        <div class="token-info"><div class="token-name">Dark BG</div><div class="token-hex">#0F0800</div></div>
+      </div>
+      <div class="token-card" onclick="copyColor('#FDFAF6')">
+        <div class="token-swatch" style="background:#FDFAF6;color:#9C7A58;border:1px solid #EAE0D4">Light BG</div>
+        <div class="token-info"><div class="token-name">Light BG</div><div class="token-hex">#FDFAF6</div></div>
+      </div>
+    </div>
+
+    <!-- Role Colors -->
+    <div style="font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-2);font-family:'JetBrains Mono',monospace;margin-bottom:12px;margin-top:8px">Role Colors</div>
+    <div class="g4">
+      <div class="card card-p flex flex-col gap-12">
+        <div style="width:100%;height:8px;border-radius:4px;background:linear-gradient(90deg,#FF6B00,#FF9A3C)"></div>
+        <div style="font-size:13px;font-weight:700;color:var(--text-0)">Guru</div>
+        <div style="font-size:11px;color:var(--text-2);font-family:'JetBrains Mono',monospace">#FF6B00 — Primary</div>
+      </div>
+      <div class="card card-p flex flex-col gap-12">
+        <div style="width:100%;height:8px;border-radius:4px;background:linear-gradient(90deg,#7C3AED,#A78BFA)"></div>
+        <div style="font-size:13px;font-weight:700;color:var(--text-0)">Super Admin</div>
+        <div style="font-size:11px;color:var(--text-2);font-family:'JetBrains Mono',monospace">#7C3AED — Violet</div>
+      </div>
+      <div class="card card-p flex flex-col gap-12">
+        <div style="width:100%;height:8px;border-radius:4px;background:linear-gradient(90deg,#2563EB,#60A5FA)"></div>
+        <div style="font-size:13px;font-weight:700;color:var(--text-0)">Admin Sekolah</div>
+        <div style="font-size:11px;color:var(--text-2);font-family:'JetBrains Mono',monospace">#2563EB — Blue</div>
+      </div>
+      <div class="card card-p flex flex-col gap-12">
+        <div style="width:100%;height:8px;border-radius:4px;background:linear-gradient(90deg,#16A34A,#4ADE80)"></div>
+        <div style="font-size:13px;font-weight:700;color:var(--text-0)">Siswa</div>
+        <div style="font-size:11px;color:var(--text-2);font-family:'JetBrains Mono',monospace">#16A34A — Green</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ SECTION: TYPOGRAPHY ═══════════════════════════════════════════ -->
+  <div id="sec-typography" class="tab-content">
+    <div class="section-header">
+      <div class="section-eyebrow">Typography System</div>
+      <div class="section-title">Tiga <em>Font</em><br>Satu Karakter</div>
+      <p class="section-desc">Kombinasi Fraunces (display serif) + Plus Jakarta Sans (UI sans-serif) + JetBrains Mono (data/code) menciptakan personality yang sekaligus akademik dan modern.</p>
+    </div>
+
+    <!-- Font 1: Fraunces -->
+    <div class="type-specimen mb-12">
+      <div class="type-meta">
+        <span class="type-badge" style="background:var(--primary-bg);color:var(--primary)">Display</span>
+        <span style="font-size:12px;font-weight:700;color:var(--text-0)">Fraunces</span>
+        <span style="font-size:11px;color:var(--text-2)">— Optical size serif, variable font · Google Fonts</span>
+      </div>
+      <div style="font-family:'Fraunces',serif;font-size:52px;font-weight:900;color:var(--text-0);letter-spacing:-0.04em;line-height:1;margin-bottom:12px">
+        Belajar <span style="color:var(--primary);font-style:italic">Lebih</span><br>Mudah, Cepat.
+      </div>
+      <div style="font-size:12px;color:var(--text-2);font-family:'JetBrains Mono',monospace">font-family: 'Fraunces' · weight: 300, 700, 900 · optical-sizing: auto</div>
+    </div>
+
+    <!-- Font 2: Plus Jakarta Sans -->
+    <div class="type-specimen mb-12">
+      <div class="type-meta">
+        <span class="type-badge" style="background:var(--info-bg);color:var(--info)">Body / UI</span>
+        <span style="font-size:12px;font-weight:700;color:var(--text-0)">Plus Jakarta Sans</span>
+        <span style="font-size:11px;color:var(--text-2)">— Modern humanist sans-serif · Google Fonts</span>
+      </div>
+      <div style="font-family:'Plus Jakarta Sans',sans-serif;margin-bottom:12px">
+        <div style="font-size:28px;font-weight:800;color:var(--text-0);margin-bottom:4px">Sistem CBT terbaik untuk sekolah Indonesia</div>
+        <div style="font-size:14px;font-weight:400;color:var(--text-1);line-height:1.8">Platform ujian berbasis AI yang membantu guru membuat soal berkualitas tinggi, dan siswa belajar dengan lebih efektif. Tersedia untuk semua jenjang pendidikan.</div>
+      </div>
+      <div style="font-size:12px;color:var(--text-2);font-family:'JetBrains Mono',monospace">font-family: 'Plus Jakarta Sans' · weight: 300, 400, 500, 600, 700, 800</div>
+    </div>
+
+    <!-- Font 3: JetBrains Mono -->
+    <div class="type-specimen mb-24">
+      <div class="type-meta">
+        <span class="type-badge" style="background:var(--violet-bg);color:var(--violet)">Mono / Data</span>
+        <span style="font-size:12px;font-weight:700;color:var(--text-0)">JetBrains Mono</span>
+        <span style="font-size:11px;color:var(--text-2)">— Programming font dengan ligatures · Google Fonts</span>
+      </div>
+      <div style="font-family:'JetBrains Mono',monospace;margin-bottom:12px">
+        <div style="font-size:22px;font-weight:700;color:var(--primary);margin-bottom:8px">NIS: 2024-0831-XII-IPA-1</div>
+        <div style="font-size:12px;color:var(--text-1);line-height:2">
+          <span style="background:var(--primary-bg);padding:2px 8px;border-radius:4px;color:var(--primary);margin-right:8px">STARTED_AT: 08:00:00</span>
+          <span style="background:var(--success-bg);padding:2px 8px;border-radius:4px;color:var(--success);margin-right:8px">DURATION: 90:00</span>
+          <span style="background:var(--info-bg);padding:2px 8px;border-radius:4px;color:var(--info)">SCORE: 88/100</span>
+        </div>
+      </div>
+      <div style="font-size:12px;color:var(--text-2);font-family:'JetBrains Mono',monospace">font-family: 'JetBrains Mono' · weight: 400, 500, 600, 700 · ligatures: on</div>
+    </div>
+
+    <!-- Type Scale -->
+    <div style="font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-2);font-family:'JetBrains Mono',monospace;margin-bottom:12px">Type Scale</div>
+    <div class="card card-p mb-32">
+      <div class="type-scale">
+        <div class="type-row"><span class="type-label">display-2xl</span><span class="type-sample" style="font-family:'Fraunces',serif;font-size:48px;font-weight:900;letter-spacing:-0.04em;line-height:1">Xamina</span><span class="type-detail">Fraunces 900 · 48px · -0.04em</span></div>
+        <div class="type-row"><span class="type-label">display-xl</span><span class="type-sample" style="font-family:'Fraunces',serif;font-size:36px;font-weight:900;letter-spacing:-0.03em">Ujian Nasional</span><span class="type-detail">Fraunces 900 · 36px · -0.03em</span></div>
+        <div class="type-row"><span class="type-label">heading-lg</span><span class="type-sample" style="font-size:24px;font-weight:800;letter-spacing:-0.02em">Dashboard Sekolah</span><span class="type-detail">Jakarta 800 · 24px · -0.02em</span></div>
+        <div class="type-row"><span class="type-label">heading-md</span><span class="type-sample" style="font-size:18px;font-weight:700">Hasil Ujian Matematika</span><span class="type-detail">Jakarta 700 · 18px</span></div>
+        <div class="type-row"><span class="type-label">heading-sm</span><span class="type-sample" style="font-size:15px;font-weight:700">Statistik Kelas XII IPA 1</span><span class="type-detail">Jakarta 700 · 15px</span></div>
+        <div class="type-row"><span class="type-label">body-lg</span><span class="type-sample" style="font-size:15px;font-weight:400">Platform ujian online terbaik untuk sekolah</span><span class="type-detail">Jakarta 400 · 15px</span></div>
+        <div class="type-row"><span class="type-label">body-md</span><span class="type-sample" style="font-size:13px;font-weight:400;color:var(--text-1)">Ujian ini terdiri dari 40 soal pilihan ganda dengan waktu 90 menit</span><span class="type-detail">Jakarta 400 · 13px</span></div>
+        <div class="type-row"><span class="type-label">caption</span><span class="type-sample" style="font-size:11px;color:var(--text-2)">Terakhir diperbarui 5 menit lalu</span><span class="type-detail">Jakarta 400 · 11px</span></div>
+        <div class="type-row"><span class="type-label">label</span><span class="type-sample" style="font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;color:var(--text-2)">NAMA SISWA</span><span class="type-detail">Mono 700 · 10px · 0.1em</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ SECTION: SPACING ═══════════════════════════════════════════════ -->
+  <div id="sec-spacing" class="tab-content">
+    <div class="section-header">
+      <div class="section-eyebrow">Spacing & Grid</div>
+      <div class="section-title">Sistem <em>Spacing</em><br>& Layout Grid</div>
+      <p class="section-desc">Base unit 4px. Semua spacing menggunakan kelipatan 4. Grid 12 kolom dengan gutter 16px untuk layout responsif.</p>
+    </div>
+
+    <div class="g2 mb-32">
+      <div class="card card-p">
+        <div style="font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-2);font-family:'JetBrains Mono',monospace;margin-bottom:16px">Spacing Scale (4px base)</div>
+        <div class="type-scale">
+          <div class="spacing-row"><span class="spacing-label">space-1</span><span class="spacing-val">4px</span><div class="spacing-bar" style="width:4px"></div><span class="spacing-desc">Micro gaps</span></div>
+          <div class="spacing-row"><span class="spacing-label">space-2</span><span class="spacing-val">8px</span><div class="spacing-bar" style="width:8px"></div><span class="spacing-desc">Icon gaps</span></div>
+          <div class="spacing-row"><span class="spacing-label">space-3</span><span class="spacing-val">12px</span><div class="spacing-bar" style="width:12px"></div><span class="spacing-desc">Small gaps</span></div>
+          <div class="spacing-row"><span class="spacing-label">space-4</span><span class="spacing-val">16px</span><div class="spacing-bar" style="width:16px"></div><span class="spacing-desc">Card padding</span></div>
+          <div class="spacing-row"><span class="spacing-label">space-5</span><span class="spacing-val">20px</span><div class="spacing-bar" style="width:20px"></div><span class="spacing-desc">Section gap</span></div>
+          <div class="spacing-row"><span class="spacing-label">space-6</span><span class="spacing-val">24px</span><div class="spacing-bar" style="width:24px"></div><span class="spacing-desc">Card padding LG</span></div>
+          <div class="spacing-row"><span class="spacing-label">space-8</span><span class="spacing-val">32px</span><div class="spacing-bar" style="width:32px"></div><span class="spacing-desc">Section spacing</span></div>
+          <div class="spacing-row"><span class="spacing-label">space-10</span><span class="spacing-val">40px</span><div class="spacing-bar" style="width:40px"></div><span class="spacing-desc">Layout gap</span></div>
+          <div class="spacing-row"><span class="spacing-label">space-16</span><span class="spacing-val">64px</span><div class="spacing-bar" style="width:64px"></div><span class="spacing-desc">Page padding</span></div>
+        </div>
+      </div>
+
+      <div class="card card-p">
+        <div style="font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-2);font-family:'JetBrains Mono',monospace;margin-bottom:16px">Border Radius</div>
+        <div style="display:flex;flex-direction:column;gap:12px">
+          {['sm:6px','base:10px','lg:16px','xl:24px','full:9999px'].map ? null : ''}
+          <div style="display:flex;align-items:center;gap:12px"><div style="width:48px;height:32px;background:var(--primary-bg);border:1.5px solid var(--primary);border-radius:6px"></div><div><div style="font-size:12px;font-weight:600;color:var(--text-0)">radius-sm</div><div style="font-size:10px;color:var(--text-2);font-family:'JetBrains Mono',monospace">6px — micro components</div></div></div>
+          <div style="display:flex;align-items:center;gap:12px"><div style="width:48px;height:32px;background:var(--primary-bg);border:1.5px solid var(--primary);border-radius:10px"></div><div><div style="font-size:12px;font-weight:600;color:var(--text-0)">radius</div><div style="font-size:10px;color:var(--text-2);font-family:'JetBrains Mono',monospace">10px — buttons, inputs</div></div></div>
+          <div style="display:flex;align-items:center;gap:12px"><div style="width:48px;height:32px;background:var(--primary-bg);border:1.5px solid var(--primary);border-radius:16px"></div><div><div style="font-size:12px;font-weight:600;color:var(--text-0)">radius-lg</div><div style="font-size:10px;color:var(--text-2);font-family:'JetBrains Mono',monospace">16px — cards, modals</div></div></div>
+          <div style="display:flex;align-items:center;gap:12px"><div style="width:48px;height:32px;background:var(--primary-bg);border:1.5px solid var(--primary);border-radius:24px"></div><div><div style="font-size:12px;font-weight:600;color:var(--text-0)">radius-xl</div><div style="font-size:10px;color:var(--text-2);font-family:'JetBrains Mono',monospace">24px — large panels</div></div></div>
+          <div style="display:flex;align-items:center;gap:12px"><div style="width:48px;height:32px;background:var(--primary-bg);border:1.5px solid var(--primary);border-radius:9999px"></div><div><div style="font-size:12px;font-weight:600;color:var(--text-0)">radius-full</div><div style="font-size:10px;color:var(--text-2);font-family:'JetBrains Mono',monospace">9999px — pills, badges</div></div></div>
+        </div>
+
+        <div style="margin-top:20px;font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-2);font-family:'JetBrains Mono',monospace;margin-bottom:12px">Shadows</div>
+        <div style="display:flex;flex-direction:column;gap:12px">
+          <div style="padding:12px 14px;background:var(--card);border-radius:10px;box-shadow:0 1px 4px rgba(255,107,0,0.06),0 1px 2px rgba(0,0,0,0.04);font-size:11px;color:var(--text-1)">shadow-sm — subtle card lift</div>
+          <div style="padding:12px 14px;background:var(--card);border-radius:10px;box-shadow:0 2px 12px rgba(255,107,0,0.08),0 1px 4px rgba(0,0,0,0.05);font-size:11px;color:var(--text-1)">shadow — card hover</div>
+          <div style="padding:12px 14px;background:var(--card);border-radius:10px;box-shadow:0 8px 32px rgba(255,107,0,0.12),0 2px 8px rgba(0,0,0,0.06);font-size:11px;color:var(--text-1)">shadow-lg — modals, dropdowns</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ SECTION: COMPONENTS ═══════════════════════════════════════════ -->
+  <div id="sec-components" class="tab-content">
+    <div class="section-header">
+      <div class="section-eyebrow">Component Library</div>
+      <div class="section-title">UI <em>Components</em><br>Xamina</div>
+      <p class="section-desc">Semua komponen menggunakan CSS variables sehingga otomatis merespons perubahan theme Light / Dark / Fun.</p>
+    </div>
+
+    <!-- BUTTONS -->
+    <div class="comp-section">
+      <div class="comp-label">Buttons</div>
+      <div class="comp-row" style="flex-direction:column;gap:14px;align-items:flex-start">
+        <div class="flex gap-8 items-center flex-wrap">
+          <button class="btn btn-primary">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+            Generate Soal
+          </button>
+          <button class="btn btn-secondary">Buat Ujian</button>
+          <button class="btn btn-ghost">Lihat Detail</button>
+          <button class="btn btn-success">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+            Selesai
+          </button>
+          <button class="btn btn-danger">Hapus</button>
+          <button class="btn btn-ghost btn-icon">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          </button>
+        </div>
+        <div class="flex gap-8 items-center flex-wrap">
+          <button class="btn btn-primary btn-sm">Simpan Draft</button>
+          <button class="btn btn-secondary btn-sm">Pratinjau</button>
+          <button class="btn btn-ghost btn-sm">Batal</button>
+          <button class="btn btn-primary btn-lg">🚀 Mulai Ujian</button>
+        </div>
+        <!-- Loading state -->
+        <div class="flex gap-8 items-center">
+          <button class="btn btn-primary" style="opacity:0.7;cursor:not-allowed">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="animation:spin 1s linear infinite"><path d="M21 12a9 9 0 11-6.219-8.56"/></svg>
+            Loading...
+          </button>
+          <button class="btn btn-ghost" style="opacity:0.5;cursor:not-allowed">Disabled</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- BADGES -->
+    <div class="comp-section">
+      <div class="comp-label">Badges & Status</div>
+      <div class="comp-row">
+        <span class="badge badge-orange">Enterprise</span>
+        <span class="badge badge-green">✓ Selesai</span>
+        <span class="badge badge-yellow">⏳ Pending</span>
+        <span class="badge badge-red">✗ Gagal</span>
+        <span class="badge badge-blue">ℹ Active</span>
+        <span class="badge badge-violet">AI Pro</span>
+        <span class="badge" style="background:var(--teal-bg);color:var(--teal);border:1px solid rgba(13,148,136,0.2)">🔗 Live</span>
+      </div>
+    </div>
+
+    <!-- INPUTS -->
+    <div class="comp-section">
+      <div class="comp-label">Form Inputs</div>
+      <div class="comp-row" style="flex-wrap:wrap;gap:16px;align-items:flex-start">
+        <div class="inp-wrap">
+          <label class="inp-label">Nama Siswa</label>
+          <input class="inp" type="text" placeholder="Masukkan nama lengkap...">
+        </div>
+        <div class="inp-wrap">
+          <label class="inp-label">Cari Soal</label>
+          <div class="inp-icon-wrap">
+            <svg class="icon-left" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input class="inp" type="text" placeholder="Keyword soal...">
+          </div>
+        </div>
+        <div class="inp-wrap">
+          <label class="inp-label" style="color:var(--danger)">NIS (Error)</label>
+          <input class="inp inp-error" type="text" value="1234-INVALID" style="border-color:var(--danger)">
+          <span style="font-size:10px;color:var(--danger)">Format NIS tidak valid</span>
+        </div>
+        <div class="inp-wrap">
+          <label class="inp-label">Durasi Ujian</label>
+          <select class="inp" style="appearance:none">
+            <option>90 Menit</option>
+            <option>60 Menit</option>
+            <option>45 Menit</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- STAT CARDS -->
+    <div class="comp-section">
+      <div class="comp-label">Stat Cards</div>
+      <div class="g4">
+        <div class="stat-card">
+          <div class="stat-icon" style="background:var(--primary-bg);color:var(--primary)">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          </div>
+          <div class="stat-value">1,240</div>
+          <div class="stat-label">Total Siswa</div>
+          <div class="stat-trend trend-up">↑ 12% bulan ini</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon" style="background:var(--success-bg);color:var(--success)">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+          </div>
+          <div class="stat-value" style="color:var(--success)">94.2%</div>
+          <div class="stat-label">Pass Rate</div>
+          <div class="stat-trend trend-up">↑ 5% dari semester lalu</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon" style="background:var(--violet-bg);color:var(--violet)">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+          </div>
+          <div class="stat-value">340</div>
+          <div class="stat-label">Soal AI Generated</div>
+          <div class="stat-trend" style="color:var(--violet)">✨ AI powered</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon" style="background:var(--warning-bg);color:var(--warning)">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          </div>
+          <div class="stat-value" style="color:var(--warning)">87.5</div>
+          <div class="stat-label">Avg. Nilai</div>
+          <div class="stat-trend trend-down">↓ 2 dari target</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- AVATARS -->
+    <div class="comp-section">
+      <div class="comp-label">Avatars</div>
+      <div class="comp-row" style="gap:20px">
+        <div style="display:flex;gap:10px;align-items:center">
+          <div class="av" style="width:52px;height:52px;background:var(--primary-bg);color:var(--primary);font-size:18px">BS</div>
+          <div class="av" style="width:40px;height:40px;background:var(--info-bg);color:var(--info);font-size:14px">AP</div>
+          <div class="av" style="width:32px;height:32px;background:var(--success-bg);color:var(--success);font-size:12px">SD</div>
+          <div class="av" style="width:24px;height:24px;background:var(--violet-bg);color:var(--violet);font-size:10px">RH</div>
+        </div>
+        <!-- Avatar with status -->
+        <div style="position:relative;display:inline-flex">
+          <div class="av" style="width:44px;height:44px;background:var(--primary-bg);color:var(--primary);font-size:16px">BS</div>
+          <span style="position:absolute;bottom:1px;right:1px;width:11px;height:11px;border-radius:50%;background:var(--success);border:2px solid var(--card)"></span>
+        </div>
+        <!-- Avatar stack -->
+        <div class="av-stack">
+          <div class="av" style="width:36px;height:36px;background:var(--primary-bg);color:var(--primary);font-size:13px">A</div>
+          <div class="av" style="width:36px;height:36px;background:var(--info-bg);color:var(--info);font-size:13px">B</div>
+          <div class="av" style="width:36px;height:36px;background:var(--success-bg);color:var(--success);font-size:13px">C</div>
+          <div class="av" style="width:36px;height:36px;background:var(--border);color:var(--text-1);font-size:11px">+8</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PROGRESS -->
+    <div class="comp-section">
+      <div class="comp-label">Progress</div>
+      <div class="comp-row" style="flex-direction:column;gap:14px;align-items:stretch">
+        <div class="progress-wrap">
+          <div style="display:flex;justify-content:space-between;margin-bottom:4px"><span style="font-size:11px;color:var(--text-1)">Matematika XII IPA 1</span><span style="font-size:11px;font-weight:700;color:var(--primary)">88%</span></div>
+          <div class="progress-track" style="height:8px"><div class="progress-bar" style="width:88%;background:var(--primary)"></div></div>
+        </div>
+        <div class="progress-wrap">
+          <div style="display:flex;justify-content:space-between;margin-bottom:4px"><span style="font-size:11px;color:var(--text-1)">Bahasa Indonesia</span><span style="font-size:11px;font-weight:700;color:var(--success)">95%</span></div>
+          <div class="progress-track" style="height:8px"><div class="progress-bar" style="width:95%;background:var(--success)"></div></div>
+        </div>
+        <div class="progress-wrap">
+          <div style="display:flex;justify-content:space-between;margin-bottom:4px"><span style="font-size:11px;color:var(--text-1)">Fisika</span><span style="font-size:11px;font-weight:700;color:var(--warning)">62%</span></div>
+          <div class="progress-track" style="height:8px"><div class="progress-bar" style="width:62%;background:var(--warning)"></div></div>
+        </div>
+        <div class="progress-wrap">
+          <div style="display:flex;justify-content:space-between;margin-bottom:4px"><span style="font-size:11px;color:var(--text-1)">Kimia</span><span style="font-size:11px;font-weight:700;color:var(--danger)">41%</span></div>
+          <div class="progress-track" style="height:8px"><div class="progress-bar" style="width:41%;background:var(--danger)"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TOASTS -->
+    <div class="comp-section">
+      <div class="comp-label">Toast Notifications</div>
+      <div class="comp-row" style="flex-direction:column;gap:8px;align-items:flex-start">
+        <div class="toast toast-success">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+          <div><div style="font-weight:700;font-size:13px">Ujian berhasil dipublikasi!</div><div style="font-size:11px;opacity:0.8">UTS Matematika XII IPA 1 sudah aktif</div></div>
+        </div>
+        <div class="toast toast-error">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+          <div><div style="font-weight:700;font-size:13px">Koneksi terputus</div><div style="font-size:11px;opacity:0.8">Jawaban disimpan secara lokal</div></div>
+        </div>
+        <div class="toast toast-warn">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          <div><div style="font-weight:700;font-size:13px">Sisa 10 menit!</div><div style="font-size:11px;opacity:0.8">Segera periksa kembali jawaban kamu</div></div>
+        </div>
+        <div class="toast toast-info">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          <div><div style="font-weight:700;font-size:13px">Ujian dimulai pukul 08.00</div><div style="font-size:11px;opacity:0.8">Pastikan kamu sudah login dan siap</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TABLE SAMPLE -->
+    <div class="comp-section">
+      <div class="comp-label">Table</div>
+      <div class="card" style="overflow:hidden">
+        <table class="tbl">
+          <thead><tr><th>Nama Siswa</th><th>Kelas</th><th>Nilai</th><th>Waktu</th><th>Status</th></tr></thead>
+          <tbody>
+            <tr><td><div style="display:flex;align-items:center;gap:8px"><div class="av" style="width:28px;height:28px;background:var(--primary-bg);color:var(--primary);font-size:10px">AP</div>Andi Prasetyo</div></td><td>XII IPA 1</td><td style="font-weight:700;color:var(--success)">92</td><td style="font-family:'JetBrains Mono',monospace;font-size:11px">78:24</td><td><span class="badge badge-green">Selesai</span></td></tr>
+            <tr><td><div style="display:flex;align-items:center;gap:8px"><div class="av" style="width:28px;height:28px;background:var(--info-bg);color:var(--info);font-size:10px">BK</div>Bela Kusuma</div></td><td>XII IPA 1</td><td style="font-weight:700;color:var(--primary)">88</td><td style="font-family:'JetBrains Mono',monospace;font-size:11px">85:12</td><td><span class="badge badge-green">Selesai</span></td></tr>
+            <tr><td><div style="display:flex;align-items:center;gap:8px"><div class="av" style="width:28px;height:28px;background:var(--violet-bg);color:var(--violet);font-size:10px">CW</div>Candra Wijaya</div></td><td>XII IPA 2</td><td style="font-weight:700;color:var(--warning)">74</td><td style="font-family:'JetBrains Mono',monospace;font-size:11px">89:55</td><td><span class="badge badge-yellow">Review</span></td></tr>
+            <tr><td><div style="display:flex;align-items:center;gap:8px"><div class="av" style="width:28px;height:28px;background:var(--danger-bg);color:var(--danger);font-size:10px">DL</div>Dewi Lestari</div></td><td>XII IPA 2</td><td style="font-weight:700;color:var(--danger)">58</td><td style="font-family:'JetBrains Mono',monospace;font-size:11px">90:00</td><td><span class="badge badge-red">Tidak Lulus</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ SECTION: MODES ════════════════════════════════════════════════ -->
+  <div id="sec-modes" class="tab-content">
+    <div class="section-header">
+      <div class="section-eyebrow">Theme Modes</div>
+      <div class="section-title">Light, Dark<br>& <em>Fun Mode</em></div>
+      <p class="section-desc">Tiga mode yang bisa dipilih user. Semua diimplementasikan via CSS custom properties — zero JS switching overhead.</p>
+    </div>
+
+    <div class="g3">
+      <!-- Light -->
+      <div style="border-radius:16px;overflow:hidden;border:2px solid var(--border);box-shadow:var(--shadow)">
+        <div style="background:#FDFAF6;padding:16px">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+            <div style="width:28px;height:28px;border-radius:7px;background:linear-gradient(135deg,#FF5500,#FF9A3C);display:flex;align-items:center;justify-content:center">
+              <svg width="14" height="14" viewBox="0 0 40 40" fill="none"><path d="M11 11L20 20M20 20L29 11M20 20L11 29M20 20L29 29" stroke="white" stroke-width="3.5" stroke-linecap="round"/><circle cx="20" cy="20" r="3" fill="white"/></svg>
+            </div>
+            <span style="font-family:'Fraunces',serif;font-weight:900;font-size:15px;color:#1C0F00">Xamin<span style="color:#FF6B00">a</span></span>
+          </div>
+          <div style="background:#FFFFFF;border:1px solid #EAE0D4;border-radius:10px;padding:12px;margin-bottom:8px;box-shadow:0 1px 4px rgba(255,107,0,0.06)">
+            <div style="font-size:10px;color:#9C7A58;font-family:'JetBrains Mono',monospace;margin-bottom:4px">TOTAL SISWA</div>
+            <div style="font-size:22px;font-weight:900;color:#1C0F00;font-family:'Fraunces',serif">1,240</div>
+            <div style="font-size:10px;color:#16A34A">↑ 12% bulan ini</div>
+          </div>
+          <button style="width:100%;padding:8px;background:#FF6B00;color:white;border:none;border-radius:8px;font-size:11px;font-weight:700;font-family:'Plus Jakarta Sans',sans-serif;cursor:pointer">Generate Soal ⚡</button>
+        </div>
+        <div style="padding:10px 16px;background:#F8F3EC;border-top:1px solid #EAE0D4">
+          <div style="font-size:11px;font-weight:800;color:#1C0F00">☀️ Light Mode</div>
+          <div style="font-size:10px;color:#9C7A58">Warm cream base · Akademik & profesional</div>
+        </div>
+      </div>
+
+      <!-- Dark -->
+      <div style="border-radius:16px;overflow:hidden;border:2px solid #3D2810;box-shadow:0 8px 32px rgba(0,0,0,0.5)">
+        <div style="background:#0D0700;padding:16px">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+            <div style="width:28px;height:28px;border-radius:7px;background:linear-gradient(135deg,#FF5500,#FF9A3C);display:flex;align-items:center;justify-content:center">
+              <svg width="14" height="14" viewBox="0 0 40 40" fill="none"><path d="M11 11L20 20M20 20L29 11M20 20L11 29M20 20L29 29" stroke="white" stroke-width="3.5" stroke-linecap="round"/><circle cx="20" cy="20" r="3" fill="white"/></svg>
+            </div>
+            <span style="font-family:'Fraunces',serif;font-weight:900;font-size:15px;color:#FFF4E8">Xamin<span style="color:#FF7A1A">a</span></span>
+          </div>
+          <div style="background:#1A1003;border:1px solid #2A1A08;border-radius:10px;padding:12px;margin-bottom:8px;box-shadow:0 2px 12px rgba(0,0,0,0.5)">
+            <div style="font-size:10px;color:#8A5A38;font-family:'JetBrains Mono',monospace;margin-bottom:4px">TOTAL SISWA</div>
+            <div style="font-size:22px;font-weight:900;color:#FFF4E8;font-family:'Fraunces',serif">1,240</div>
+            <div style="font-size:10px;color:#4ADE80">↑ 12% bulan ini</div>
+          </div>
+          <button style="width:100%;padding:8px;background:#FF7A1A;color:white;border:none;border-radius:8px;font-size:11px;font-weight:700;font-family:'Plus Jakarta Sans',sans-serif;cursor:pointer">Generate Soal ⚡</button>
+        </div>
+        <div style="padding:10px 16px;background:#130B01;border-top:1px solid #2A1A08">
+          <div style="font-size:11px;font-weight:800;color:#FFF4E8">🌙 Dark Mode</div>
+          <div style="font-size:10px;color:#8A5A38">Deep brown-black · Nyaman di malam hari</div>
+        </div>
+      </div>
+
+      <!-- Fun -->
+      <div style="border-radius:16px;overflow:hidden;border:2px solid #FFB870;box-shadow:0 8px 32px rgba(255,69,0,0.2)">
+        <div style="background:linear-gradient(135deg,#FFF8F0,#FFE4C8);padding:16px">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+            <div style="width:28px;height:28px;border-radius:7px;background:linear-gradient(135deg,#FF4500,#FF9A3C);display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(255,69,0,0.4)">
+              <svg width="14" height="14" viewBox="0 0 40 40" fill="none"><path d="M11 11L20 20M20 20L29 11M20 20L11 29M20 20L29 29" stroke="white" stroke-width="3.5" stroke-linecap="round"/><circle cx="20" cy="20" r="3" fill="white"/></svg>
+            </div>
+            <span style="font-family:'Fraunces',serif;font-weight:900;font-size:15px;color:#1A0800">Xamin<span style="color:#FF4500">a</span></span>
+          </div>
+          <div style="background:#FFFFFF;border:1px solid #FFD4A8;border-radius:10px;padding:12px;margin-bottom:8px;box-shadow:0 4px 16px rgba(255,69,0,0.15)">
+            <div style="font-size:10px;color:#C46000;font-family:'JetBrains Mono',monospace;margin-bottom:4px">TOTAL SISWA</div>
+            <div style="font-size:22px;font-weight:900;color:#1A0800;font-family:'Fraunces',serif">1,240</div>
+            <div style="font-size:10px;color:#059669">↑ 12% bulan ini</div>
+          </div>
+          <button style="width:100%;padding:8px;background:linear-gradient(90deg,#FF4500,#FF8C00);color:white;border:none;border-radius:8px;font-size:11px;font-weight:700;font-family:'Plus Jakarta Sans',sans-serif;cursor:pointer;box-shadow:0 4px 12px rgba(255,69,0,0.35)">Generate Soal ⚡</button>
+        </div>
+        <div style="padding:10px 16px;background:#FFD4A8;border-top:1px solid #FFB870">
+          <div style="font-size:11px;font-weight:800;color:#1A0800">🎨 Fun Mode</div>
+          <div style="font-size:10px;color:#8B3A00">Vibrant orange · Untuk siswa Gen Z</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-top:24px;padding:20px;background:var(--primary-bg);border:1px solid var(--primary-border);border-radius:16px">
+      <div style="font-size:13px;font-weight:800;color:var(--text-0);margin-bottom:6px">💡 Cara implementasi</div>
+      <code style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-1);line-height:2;display:block">
+        &lt;!-- Light (default) --&gt;<br>
+        &lt;html&gt; atau &lt;body&gt;<br><br>
+        &lt;!-- Dark --&gt;<br>
+        &lt;body data-mode="dark"&gt;<br><br>
+        &lt;!-- Fun --&gt;<br>
+        &lt;body data-mode="fun"&gt;
+      </code>
+    </div>
+  </div>
+
+  </div><!-- /content -->
+</div><!-- /main -->
+</div><!-- /layout -->
+
+<!-- Copied Toast -->
+<div class="copied-hint" id="copied-hint">Copied to clipboard! 📋</div>
+
+<style>
+@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+</style>
+
+<script>
+// ─── NAV ────────────────────────────────────────────────────────────────
+const sections = ['overview','logo','colors','typography','spacing','components','modes'];
+const labels = {overview:'Overview',logo:'Logo System',colors:'Color Palette',typography:'Typography',spacing:'Spacing & Grid',components:'Components',modes:'Theme Modes'};
+
+function showSection(id) {
+  sections.forEach(s => {
+    document.getElementById('sec-'+s).classList.toggle('active', s===id);
+    const items = document.querySelectorAll('.sb-item');
+    items.forEach(it => it.classList.remove('active'));
+  });
+  // Find and activate sidebar item
+  document.querySelectorAll('.sb-item').forEach(it => {
+    it.classList.remove('active');
+    if(it.getAttribute('onclick') && it.getAttribute('onclick').includes(id)) it.classList.add('active');
+  });
+  document.getElementById('breadcrumb-current').textContent = labels[id] || id;
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+// ─── MODE TOGGLE ─────────────────────────────────────────────────────────
+function setMode(mode, btn) {
+  document.body.setAttribute('data-mode', mode);
+  document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+// ─── COPY COLOR ───────────────────────────────────────────────────────────
+function copyColor(hex) {
+  navigator.clipboard.writeText(hex).catch(()=>{});
+  const hint = document.getElementById('copied-hint');
+  hint.textContent = `${hex} copied! 📋`;
+  hint.classList.add('show');
+  setTimeout(() => hint.classList.remove('show'), 2000);
+}
+
+// ─── INIT ─────────────────────────────────────────────────────────────────
+document.getElementById('sec-overview').classList.add('active');
+document.querySelectorAll('.sb-item')[0].classList.add('active');
+</script>
+</body>
+</html>

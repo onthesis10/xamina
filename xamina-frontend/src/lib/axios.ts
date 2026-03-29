@@ -1,5 +1,6 @@
 import axios from "axios";
 
+import { resolveApiBaseUrl } from "@/lib/api-base";
 import { useAuthStore } from "@/store/auth.store";
 import { useUiStore } from "@/store/ui.store";
 import type { ApiErrorResponse } from "@/types/api.types";
@@ -13,7 +14,7 @@ export interface NormalizedApiError {
 }
 
 export const api = axios.create({
-    baseURL: import.meta.env.VITE_API_URL || "http://localhost:8080/api/v1",
+    baseURL: resolveApiBaseUrl(import.meta.env.VITE_API_URL),
 });
 
 api.interceptors.request.use((config) => {

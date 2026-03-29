@@ -1,5 +1,5 @@
 use chrono::{DateTime, Utc};
-use sqlx::PgPool;
+use sqlx::{FromRow, PgPool};
 use uuid::Uuid;
 
 use crate::error::CoreError;
@@ -37,6 +37,12 @@ pub struct IssueCertificateContextRow {
     pub tenant_name: String,
     pub finished_at: Option<DateTime<Utc>>,
     pub submission_status: String,
+}
+
+#[derive(Debug, Clone, FromRow)]
+pub struct CertificateDownloadRow {
+    pub certificate_no: String,
+    pub file_path: String,
 }
 
 impl CertificateRepository {
@@ -152,6 +158,27 @@ impl CertificateRepository {
         .fetch_optional(&self.pool)
         .await
         .map_err(|_| CoreError::internal("DB_ERROR", "Failed to load certificate"))
+    }
+
+    pub async fn find_download_for_student_by_id(
+        &self,
+        tenant_id: Uuid,
+        student_id: Uuid,
+        certificate_id: Uuid,
+    ) -> Result<Option<CertificateDownloadRow>, CoreError> {
+        sqlx::query_as::<_, CertificateDownloadRow>(
+            "SELECT certificate_no, file_path
+             FROM certificates
+             WHERE tenant_id = $1
+               AND student_id = $2
+               AND id = $3",
+        )
+        .bind(tenant_id)
+        .bind(student_id)
+        .bind(certificate_id)
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(|_| CoreError::internal("DB_ERROR", "Failed to load certificate download"))
     }
 
     pub async fn get_issue_context(
