@@ -81,7 +81,12 @@ impl UserRepository {
         body: &CreateUserPayload,
         password_hash: &str,
     ) -> Result<UserDto, CoreError> {
-        sqlx::query_as::<_, UserDto>(
+        let mut tx = self.pool.begin().await.map_err(|e| {
+            CoreError::internal("DB_ERROR", "Failed to start transaction")
+                .with_details(serde_json::json!({ "db_error": e.to_string() }))
+        })?;
+
+        let user = sqlx::query_as::<_, UserDto>(
             "INSERT INTO users (tenant_id, email, password_hash, name, role, class_id)
              VALUES ($1, $2, $3, $4, $5, $6)
              RETURNING id, tenant_id, email, name, role, class_id, is_active",
@@ -92,12 +97,136 @@ impl UserRepository {
         .bind(body.name.clone())
         .bind(body.role.clone())
         .bind(body.class_id)
-        .fetch_one(&self.pool)
+        .fetch_one(&mut *tx)
         .await
         .map_err(|e| {
             CoreError::bad_request("CREATE_USER_FAILED", "Failed to create user")
                 .with_details(serde_json::json!({ "db_error": e.to_string() }))
-        })
+        })?;
+
+        if body.role == "siswa" {
+            sqlx::query(
+                "INSERT INTO student_profiles (tenant_id, user_id, nisn)
+                 VALUES ($1, $2, $3)",
+            )
+            .bind(tenant_id)
+            .bind(user.id)
+            .bind(None::<String>) // Empty NISN initially
+            .execute(&mut *tx)
+            .await
+            .map_err(|e| {
+                CoreError::internal("CREATE_PROFILE_FAILED", "Failed to create student profile")
+                    .with_details(serde_json::json!({ "db_error": e.to_string() }))
+            })?;
+
+            if let Some(class_id) = body.class_id {
+                sqlx::query(
+                    "INSERT INTO student_class_history (tenant_id, student_id, class_id, academic_year)
+                     VALUES ($1, $2, $3, $4)",
+                )
+                .bind(tenant_id)
+                .bind(user.id)
+                .bind(class_id)
+                .bind("2025/2026")
+                .execute(&mut *tx)
+                .await
+                .map_err(|e| {
+                    CoreError::internal("CREATE_HISTORY_FAILED", "Failed to create class history")
+                        .with_details(serde_json::json!({ "db_error": e.to_string() }))
+                })?;
+            }
+        }
+
+        tx.commit().await.map_err(|e| {
+            CoreError::internal("DB_ERROR", "Failed to commit transaction")
+                .with_details(serde_json::json!({ "db_error": e.to_string() }))
+        })?;
+
+        Ok(user)
+    }
+
+    pub async fn generate_bulk_users(
+        &self,
+        tenant_id: Uuid,
+        count: i32,
+        role: &str,
+        name_prefix: &str,
+        class_id: Option<Uuid>,
+        academic_year: Option<&str>,
+        password_hash: &str,
+    ) -> Result<Vec<UserDto>, CoreError> {
+        let mut tx = self.pool.begin().await.map_err(|e| {
+            CoreError::internal("DB_ERROR", "Failed to start transaction")
+                .with_details(serde_json::json!({ "db_error": e.to_string() }))
+        })?;
+
+        let mut users = Vec::with_capacity(count as usize);
+
+        for i in 1..=count {
+            let unique_suffix = uuid::Uuid::new_v4().to_string()[..6].to_string();
+            let email = format!("{}_{}@sekolah.sch.id", name_prefix.to_lowercase().replace(' ', ""), unique_suffix);
+            let name = format!("{} {}", name_prefix, i);
+
+            let user = sqlx::query_as::<_, UserDto>(
+                "INSERT INTO users (tenant_id, email, password_hash, name, role, class_id)
+                 VALUES ($1, $2, $3, $4, $5, $6)
+                 RETURNING id, tenant_id, email, name, role, class_id, is_active",
+            )
+            .bind(tenant_id)
+            .bind(email)
+            .bind(password_hash)
+            .bind(name)
+            .bind(role)
+            .bind(class_id)
+            .fetch_one(&mut *tx)
+            .await
+            .map_err(|e| {
+                CoreError::bad_request("GENERATE_USER_FAILED", "Failed to generate user")
+                    .with_details(serde_json::json!({ "db_error": e.to_string() }))
+            })?;
+
+            if role == "siswa" {
+                sqlx::query(
+                    "INSERT INTO student_profiles (tenant_id, user_id, nisn)
+                     VALUES ($1, $2, $3)",
+                )
+                .bind(tenant_id)
+                .bind(user.id)
+                .bind(None::<String>) // Empty NISN initially
+                .execute(&mut *tx)
+                .await
+                .map_err(|e| {
+                    CoreError::internal("CREATE_PROFILE_FAILED", "Failed to create student profile")
+                        .with_details(serde_json::json!({ "db_error": e.to_string() }))
+                })?;
+
+                if let Some(c_id) = class_id {
+                    sqlx::query(
+                        "INSERT INTO student_class_history (tenant_id, student_id, class_id, academic_year)
+                         VALUES ($1, $2, $3, $4)",
+                    )
+                    .bind(tenant_id)
+                    .bind(user.id)
+                    .bind(c_id)
+                    .bind(academic_year.unwrap_or("2025/2026"))
+                    .execute(&mut *tx)
+                    .await
+                    .map_err(|e| {
+                        CoreError::internal("CREATE_HISTORY_FAILED", "Failed to create class history")
+                            .with_details(serde_json::json!({ "db_error": e.to_string() }))
+                    })?;
+                }
+            }
+
+            users.push(user);
+        }
+
+        tx.commit().await.map_err(|e| {
+            CoreError::internal("DB_ERROR", "Failed to commit transaction")
+                .with_details(serde_json::json!({ "db_error": e.to_string() }))
+        })?;
+
+        Ok(users)
     }
 
     pub async fn get_user(

@@ -36,7 +36,7 @@ pub struct CreateUserPayload {
     pub name: String,
     pub role: String,
     pub class_id: Option<Uuid>,
-    pub password: Option<String>,
+    pub password: String,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -59,4 +59,20 @@ pub struct CsvImportResult {
     pub inserted: usize,
     pub failed: usize,
     pub errors: Vec<CsvImportError>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct GenerateBulkUsersPayload {
+    pub count: i32,
+    pub role: String,
+    pub name_prefix: String,
+    pub password: String,
+    pub class_id: Option<Uuid>,
+    pub academic_year: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct GenerateBulkUsersResult {
+    pub generated_count: i32,
+    pub csv_url: String,
 }

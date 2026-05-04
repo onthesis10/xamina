@@ -18,6 +18,12 @@ pub struct ExamDto {
     pub shuffle_options: bool,
     pub start_at: Option<DateTime<Utc>>,
     pub end_at: Option<DateTime<Utc>>,
+    pub subject_id: Option<Uuid>,
+    pub class_id: Option<Uuid>,
+    #[sqlx(default)]
+    pub subject_name: Option<String>,
+    #[sqlx(default)]
+    pub class_name: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, FromRow)]
@@ -37,6 +43,8 @@ pub struct ExamPayload {
     pub shuffle_options: Option<bool>,
     pub start_at: Option<DateTime<Utc>>,
     pub end_at: Option<DateTime<Utc>>,
+    pub subject_id: Option<Uuid>,
+    pub class_id: Option<Uuid>,
 }
 
 #[derive(Debug, Clone, Deserialize)]

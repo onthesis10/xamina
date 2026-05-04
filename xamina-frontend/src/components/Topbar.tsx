@@ -1,7 +1,8 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Bell,
+  Menu,
   X,
 } from "lucide-react";
 
@@ -9,13 +10,25 @@ import { notificationApi } from "@/features/analytics/analytics.api";
 import { useAuthStore } from "@/store/auth.store";
 import { useUiStore } from "@/store/ui.store";
 
+function getGreeting() {
+  const hour = new Date().getHours();
+  if (hour < 12) return "Good morning";
+  if (hour < 18) return "Good afternoon";
+  return "Good evening";
+}
+
 export function Topbar() {
   const qc = useQueryClient();
   const user = useAuthStore((state) => state.user);
-  const title = useUiStore((state) => state.pageTitle);
-  const activeTenantId = useUiStore((state) => state.activeTenantId);
+  const toggleSidebar = useUiStore((state) => state.toggleSidebar);
 
   const [openNotif, setOpenNotif] = useState(false);
+  const [greeting, setGreeting] = useState(getGreeting());
+
+  useEffect(() => {
+    const timer = setInterval(() => setGreeting(getGreeting()), 60000);
+    return () => clearInterval(timer);
+  }, []);
 
   const notificationQuery = useQuery({
     queryKey: ["notifications-topbar"],
@@ -39,22 +52,31 @@ export function Topbar() {
   });
 
   const unreadCount = useMemo(() => notificationQuery.data?.meta.unread_count ?? 0, [notificationQuery.data]);
-  const subtitle = useMemo(
-    () => buildSubtitle(user?.role, activeTenantId),
-    [activeTenantId, user?.role],
-  );
 
   return (
     <header className="topbar">
+      {/* Left: Mobile sidebar toggle + Breadcrumb */}
       <div className="topbar-copy">
-        <h2 className="page-title">{title}</h2>
-        <p className="page-subtitle">{subtitle}</p>
+        <button
+          className="btn btn-icon btn-ghost topbar-menu-btn"
+          onClick={toggleSidebar}
+          aria-label="Toggle sidebar"
+        >
+          <Menu size={18} />
+        </button>
+        {user && (
+          <div className="topbar-greeting">
+            <h2 className="greeting-title">{greeting}, {user.name?.split(" ")[0]} 👋</h2>
+            <p className="greeting-sub">{user.tenant_name}</p>
+          </div>
+        )}
       </div>
 
-      <div className="topbar-actions">
+      {/* Right: Actions */}
+      <div className="topbar-actions ml-auto">
         <div className="relative">
           <button
-            className={`btn btn-icon btn-ghost notif-trigger ${openNotif ? 'active' : ''}`}
+            className={`btn btn-icon btn-ghost notif-trigger ${openNotif ? "active" : ""}`}
             onClick={() => { setOpenNotif(!openNotif); }}
             aria-label="Notifications"
           >
@@ -105,20 +127,4 @@ export function Topbar() {
       </div>
     </header>
   );
-}
-
-function buildSubtitle(role?: string, activeTenantId?: string | null) {
-  const parts = [formatRole(role)];
-  if (role === "super_admin") {
-    parts.push(activeTenantId ? `Scope ${activeTenantId.slice(0, 8)}` : "Global Scope");
-  }
-  return parts.join(" | ");
-}
-
-function formatRole(role?: string) {
-  if (!role) return "-";
-  if (role === "super_admin") return "Super Admin";
-  if (role === "guru") return "Guru";
-  if (role === "siswa") return "Siswa";
-  return "Admin";
 }

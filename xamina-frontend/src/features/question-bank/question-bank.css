@@ -1,0 +1,40 @@
+/*
+ * question-bank.css — minimal utilities only
+ * Semua styling utama sudah pakai Tailwind + CSS vars di komponen TSX
+ */
+
+/* Cursor saat drag divider */
+.is-resizing,
+.is-resizing * {
+    cursor: col-resize !important;
+    user-select: none !important;
+}
+
+/* Thin scrollbar — semua panel scroll */
+.qb-scroll {
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+}
+
+.qb-scroll::-webkit-scrollbar {
+    width: 4px;
+}
+
+.qb-scroll::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.qb-scroll::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 999px;
+}
+
+.qb-scroll::-webkit-scrollbar-thumb:hover {
+    background: var(--border-hover);
+}
+
+/* Placeholder color di semua input question-bank mengikuti theme */
+.qb-root input::placeholder,
+.qb-root textarea::placeholder {
+    color: var(--text-3);
+}

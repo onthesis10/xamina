@@ -16,6 +16,8 @@ import { PlatformConsoleRoutePage } from "@/routes/_app/platform/console";
 import { PlatformAuditLogsRoutePage } from "@/routes/_app/platform/audit-logs";
 import { PrivacyRoutePage } from "@/routes/_app/privacy";
 import { QuestionBankRoutePage } from "@/routes/_app/question-bank";
+import { SubjectsPanel } from "@/features/subjects/SubjectsPanel";
+import { TeacherAssignmentsPanel } from "@/features/teacher-assignments/TeacherAssignmentsPanel";
 import { ReportsRoutePage } from "@/routes/_app/reports";
 import { UsersRoutePage } from "@/routes/_app/users";
 import { LoginRoutePage } from "@/routes/_auth/login";
@@ -23,6 +25,8 @@ import { RootLayout } from "@/routes/__root";
 import { DesignSystemRoutePage } from "@/routes/design-system";
 import { PricingRoutePage } from "@/routes/pricing";
 import { LandingPage } from "@/routes";
+import { HelpCenterRoutePage } from "@/routes/help";
+import { OnboardingRoutePage } from "@/routes/onboarding";
 import { useAuthStore } from "@/store/auth.store";
 import type { Role } from "@/types/common.types";
 
@@ -56,6 +60,18 @@ const pricingRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/pricing",
   component: PricingRoutePage,
+});
+
+const helpRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/help",
+  component: HelpCenterRoutePage,
+});
+
+const onboardingRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/onboarding",
+  component: OnboardingRoutePage,
 });
 
 const loginRoute = createRoute({
@@ -100,6 +116,20 @@ const classesRoute = createRoute({
   path: "/classes",
   beforeLoad: () => requireRole(["admin", "super_admin"]),
   component: ClassesRoutePage,
+});
+
+const subjectsRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: "/subjects",
+  beforeLoad: () => requireRole(["admin", "super_admin"]),
+  component: SubjectsPanel,
+});
+
+const teacherAssignmentsRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: "/teacher-assignments",
+  beforeLoad: () => requireRole(["admin", "super_admin"]),
+  component: TeacherAssignmentsPanel,
 });
 
 const questionRoute = createRoute({
@@ -196,12 +226,16 @@ const routeTree = rootRoute.addChildren([
   indexRoute,
   designSystemRoute,
   pricingRoute,
+  helpRoute,
+  onboardingRoute,
   authRoute.addChildren([loginRoute]),
   appRoute.addChildren([
     dashboardRoute,
     billingRoute,
     usersRoute,
     classesRoute,
+    subjectsRoute,
+    teacherAssignmentsRoute,
     questionRoute,
     examsRoute,
     examMonitorRoute,

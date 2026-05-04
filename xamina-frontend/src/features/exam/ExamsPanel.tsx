@@ -8,9 +8,13 @@ import { DataTable } from "@/components/DataTable";
 import { FormField } from "@/components/FormField";
 import { StatusBadge } from "@/components/StatusBadge";
 import { questionApi } from "@/features/question/question.api";
-import { errorMessageForCode } from "@/lib/axios";
+import { api, errorMessageForCode } from "@/lib/axios";
+import { useAuthStore } from "@/store/auth.store";
 import { useToast } from "@/store/toast.store";
-import type { CreateExamDto, ExamDto, ExamStatus, PublishPrecheckResult } from "@/types/api.types";
+import type { 
+    ApiSuccess, ClassDto, CreateExamDto, ExamDto, 
+    ExamStatus, PublishPrecheckResult, SubjectDto, TeacherSubjectDto 
+} from "@/types/api.types";
 
 import { examApi } from "./exam.api";
 import { dateToLocalDateTimeInput, localDateTimePreview, localDateTimeToUtcIso } from "./exam.datetime";
@@ -28,6 +32,8 @@ const EMPTY_EXAM_FORM: CreateExamDto = {
     shuffle_options: false,
     start_at: "",
     end_at: "",
+    subject_id: null,
+    class_id: null,
 };
 
 const STEP_LABELS: Record<WizardStep, string> = {
@@ -59,6 +65,7 @@ export function ExamsPanel() {
     const qc = useQueryClient();
     const toast = useToast();
     const navigate = useNavigate();
+    const user = useAuthStore((state) => state.user);
     const [selectedExamId, setSelectedExamId] = useState<string>("");
     const [confirmAction, setConfirmAction] = useState<"publish" | "unpublish" | null>(null);
     const [search, setSearch] = useState("");
@@ -83,6 +90,40 @@ export function ExamsPanel() {
         queryKey: ["questions-for-exam"],
         queryFn: () => questionApi.list({ page: 1, page_size: 200 }),
     });
+
+    const subjectsQuery = useQuery({
+        queryKey: ["subjects", "all"],
+        queryFn: async () => {
+            const response = await api.get<ApiSuccess<SubjectDto[]>>("/subjects/all");
+            return response.data.data;
+        },
+    });
+
+    const classesQuery = useQuery({
+        queryKey: ["classes"],
+        queryFn: async () => {
+            const response = await api.get<ApiSuccess<ClassDto[]>>("/classes");
+            return response.data.data.filter(c => c.is_active);
+        },
+    });
+
+    // Feature 3: Fetch teacher subjects for guru role
+    const teacherSubjectsQuery = useQuery({
+        queryKey: ["teacher-subjects-for-exam", user?.id],
+        queryFn: async () => {
+            const response = await api.get<ApiSuccess<TeacherSubjectDto[]>>(`/teachers/${user!.id}/subjects`);
+            return response.data.data;
+        },
+        enabled: user?.role === "guru",
+    });
+
+    // For guru: only show assigned subjects; admin: show all
+    const availableSubjects = useMemo(() => {
+        if (user?.role === "guru" && teacherSubjectsQuery.data) {
+            return teacherSubjectsQuery.data.map(ts => ({ id: ts.subject_id, name: ts.subject_name }));
+        }
+        return (subjectsQuery.data ?? []).map(s => ({ id: s.id, name: s.name }));
+    }, [user?.role, teacherSubjectsQuery.data, subjectsQuery.data]);
 
     const examDetailQuery = useQuery({
         queryKey: ["exam-detail", selectedExamId],
@@ -493,6 +534,32 @@ export function ExamsPanel() {
                             aria-label="Exam description"
                         />
                     </FormField>
+                    <div className="grid-2">
+                        <FormField label="Mata Pelajaran">
+                            <select
+                                className="input"
+                                value={newExam.subject_id ?? ""}
+                                onChange={(e) => setNewExam((old) => ({ ...old, subject_id: e.target.value || null }))}
+                            >
+                                <option value="">-- Pilih Mata Pelajaran --</option>
+                                {availableSubjects.map(s => (
+                                    <option key={s.id} value={s.id}>{s.name}</option>
+                                ))}
+                            </select>
+                        </FormField>
+                        <FormField label="Kelas">
+                            <select
+                                className="input"
+                                value={newExam.class_id ?? ""}
+                                onChange={(e) => setNewExam((old) => ({ ...old, class_id: e.target.value || null }))}
+                            >
+                                <option value="">-- Semua Kelas (Global) --</option>
+                                {classesQuery.data?.map(c => (
+                                    <option key={c.id} value={c.id}>{c.name}</option>
+                                ))}
+                            </select>
+                        </FormField>
+                    </div>
                 </div>
             );
         }
@@ -668,6 +735,8 @@ export function ExamsPanel() {
                 }
                 columns={[
                     { key: "title", header: "Title", render: (examRow: ExamDto) => examRow.title },
+                    { key: "subject", header: "Subject", render: (examRow: ExamDto) => examRow.subject_name ?? "-" },
+                    { key: "class", header: "Class", render: (examRow: ExamDto) => examRow.class_name ?? "Global" },
                     { key: "duration", header: "Duration", render: (examRow: ExamDto) => `${examRow.duration_minutes} min` },
                     { key: "status", header: "Status", render: (examRow: ExamDto) => <StatusBadge value={examRow.status} /> },
                     {

@@ -7,7 +7,13 @@ use xamina_core::domain::{
     certificate::{repository::CertificateRepository, service::CertificateService},
     exam::{repository::ExamRepository, service::ExamService},
     notification::{repository::NotificationRepository, service::NotificationService},
+    student_class::{repository::StudentClassRepository, service::StudentClassService},
+    student_profile::{repository::StudentProfileRepository, service::StudentProfileService},
+    subject::{repository::SubjectRepository, service::SubjectService},
     submission::{repository::SubmissionRepository, service::SubmissionService},
+    teacher_assignment::{
+        repository::TeacherAssignmentRepository, service::TeacherAssignmentService,
+    },
     tenant::repository::TenantRepository,
     user::{repository::UserRepository, service::UserService},
 };
@@ -22,6 +28,10 @@ pub struct AppServices {
     pub notification: NotificationService,
     pub submission: SubmissionService,
     pub user: UserService,
+    pub subject: SubjectService,
+    pub teacher_assignment: TeacherAssignmentService,
+    pub student_class: StudentClassService,
+    pub student_profile: StudentProfileService,
 }
 
 impl AppServices {
@@ -46,6 +56,13 @@ impl AppServices {
             certificate.clone(),
         );
         let user = UserService::new(UserRepository::new(pool.clone()));
+        let subject = SubjectService::new(SubjectRepository::new(pool.clone()));
+        let teacher_assignment =
+            TeacherAssignmentService::new(TeacherAssignmentRepository::new(pool.clone()));
+        let student_class = StudentClassService::new(StudentClassRepository::new(pool.clone()));
+        let student_profile =
+            StudentProfileService::new(StudentProfileRepository::new(pool.clone()));
+
         Self {
             ai,
             exam,
@@ -55,6 +72,10 @@ impl AppServices {
             notification,
             submission,
             user,
+            subject,
+            teacher_assignment,
+            student_class,
+            student_profile,
         }
     }
 }

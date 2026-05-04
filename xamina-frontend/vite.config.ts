@@ -1,6 +1,15 @@
-import { defineConfig } from "vite";
+import { defineConfig, createLogger } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
+
+// Vite's internal WS proxy logs ECONNRESET/ECONNABORTED on every WS disconnect (refresh, navigate
+// away). These are harmless transients — silence them so the terminal stays readable.
+const silentLogger = createLogger();
+const originalError = silentLogger.error.bind(silentLogger);
+silentLogger.error = (msg, options) => {
+    if (typeof msg === "string" && msg.includes("ws proxy socket error")) return;
+    originalError(msg, options);
+};
 
 const DEFAULT_API_PROXY_TARGET = "http://127.0.0.1:8080";
 const LOCAL_API_PROXY_CANDIDATES = [
@@ -44,28 +53,40 @@ export default defineConfig(async () => {
 
     return {
         plugins: [react()],
+        customLogger: silentLogger,
         server: {
             proxy: {
                 "/api": {
                     target: apiProxyTarget,
                     changeOrigin: true,
+                    secure: false,
                 },
                 "/health": {
                     target: apiProxyTarget,
                     changeOrigin: true,
+                    secure: false,
                 },
                 "/metrics": {
                     target: apiProxyTarget,
                     changeOrigin: true,
+                    secure: false,
                 },
                 "/uploads": {
                     target: apiProxyTarget,
                     changeOrigin: true,
+                    secure: false,
                 },
                 "/ws": {
                     target: apiProxyTarget,
                     changeOrigin: true,
+                    secure: false,
                     ws: true,
+                    configure: (proxy: any) => {
+                        proxy.on("error", (err: NodeJS.ErrnoException) => {
+                            if (err.code === "ECONNRESET" || err.code === "ECONNREFUSED") return;
+                            console.warn("[ws-proxy]", err.message);
+                        });
+                    },
                 },
             },
         },

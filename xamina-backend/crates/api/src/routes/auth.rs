@@ -76,6 +76,7 @@ pub struct AuthUserDto {
     pub name: String,
     pub role: String,
     pub class_id: Option<Uuid>,
+    pub tenant_name: String,
 }
 
 #[derive(Debug, Clone, FromRow)]
@@ -91,8 +92,9 @@ struct UserRow {
     password_hash: String,
     name: String,
     role: String,
-    class_id: Option<Uuid>,
-    is_active: bool,
+    pub class_id: Option<Uuid>,
+    pub is_active: bool,
+    pub tenant_name: String,
 }
 
 fn verify_password(hash: &str, password: &str) -> bool {
@@ -166,9 +168,10 @@ async fn login(
 
     let email = body.email.trim().to_ascii_lowercase();
     let user = sqlx::query_as::<_, UserRow>(
-        "SELECT id, tenant_id, email, password_hash, name, role, class_id, is_active
-         FROM users
-         WHERE tenant_id = $1 AND email = $2",
+        "SELECT u.id, u.tenant_id, u.email, u.password_hash, u.name, u.role, u.class_id, u.is_active, t.name AS tenant_name
+         FROM users u
+         JOIN tenants t ON t.id = u.tenant_id
+         WHERE u.tenant_id = $1 AND u.email = $2",
     )
     .bind(tenant.id)
     .bind(&email)
@@ -264,9 +267,10 @@ async fn refresh_token(
     Json(body): Json<RefreshRequest>,
 ) -> ApiResult<SuccessResponse<auth_security::LoginSessionData>> {
     let user = sqlx::query_as::<_, UserRow>(
-        "SELECT u.id, u.tenant_id, u.email, u.password_hash, u.name, u.role, u.class_id, u.is_active
+        "SELECT u.id, u.tenant_id, u.email, u.password_hash, u.name, u.role, u.class_id, u.is_active, t.name AS tenant_name
          FROM refresh_tokens rt
          JOIN users u ON u.id = rt.user_id
+         JOIN tenants t ON t.id = u.tenant_id
          WHERE rt.token = $1 AND rt.revoked_at IS NULL AND rt.expires_at > NOW()",
     )
     .bind(&body.refresh_token)
@@ -323,8 +327,10 @@ async fn me(
     auth: AuthUser,
 ) -> ApiResult<SuccessResponse<AuthUserDto>> {
     let user = sqlx::query_as::<_, UserRow>(
-        "SELECT id, tenant_id, email, password_hash, name, role, class_id, is_active
-         FROM users WHERE id = $1 AND tenant_id = $2",
+        "SELECT u.id, u.tenant_id, u.email, u.password_hash, u.name, u.role, u.class_id, u.is_active, t.name AS tenant_name
+         FROM users u
+         JOIN tenants t ON t.id = u.tenant_id
+         WHERE u.id = $1 AND u.tenant_id = $2",
     )
     .bind(auth.0.sub)
     .bind(auth.0.tenant_id)
@@ -348,6 +354,7 @@ async fn me(
             name: user.name,
             role: user.role,
             class_id: user.class_id,
+            tenant_name: user.tenant_name,
         },
     }))
 }
@@ -361,5 +368,6 @@ fn map_user(user: &UserRow) -> SecurityUserRow {
         name: user.name.clone(),
         role: user.role.clone(),
         class_id: user.class_id,
+        tenant_name: user.tenant_name.clone(),
     }
 }

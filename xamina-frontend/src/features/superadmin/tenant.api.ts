@@ -24,4 +24,8 @@ export const tenantApi = {
     const response = await api.patch<ApiSuccess<TenantDto>>(`/platform/tenants/${id}`, payload);
     return response.data.data;
   },
+  async updateMe(payload: { name: string }) {
+    const response = await api.patch<ApiSuccess<{ id: string }>>("/me", payload);
+    return response.data.data;
+  },
 };

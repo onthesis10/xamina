@@ -1,21 +1,22 @@
 import { type ReactNode, useEffect, useMemo, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
+import { motion } from "framer-motion";
 import Chart from "chart.js/auto";
 import {
   ArrowUpRight,
   BookOpen,
-  Brain,
   BrainCircuit,
   Building2,
   CalendarClock,
   ClipboardList,
   Clock,
-  GraduationCap,
+  Crown,
+  Medal,
   ShieldCheck,
-  Sparkles,
   Trophy,
   Users,
+  Wand2,
   Zap,
 } from "lucide-react";
 
@@ -32,10 +33,10 @@ import type {
   DashboardAdminSummaryDto,
   DashboardGuruSummaryDto,
   DashboardSiswaSummaryDto,
-  DashboardStatsDto,
   StudentRecentResultDto,
   StudentUpcomingExamDto,
   TenantDto,
+  TopScorerDto,
   TrendPointDto,
 } from "@/types/api.types";
 
@@ -57,15 +58,16 @@ function readChartPalette() {
     successSoft: styles.getPropertyValue("--success-bg").trim() || "rgba(22,163,74,0.16)",
     textMuted: styles.getPropertyValue("--text-2").trim() || "#9C7A58",
     border: styles.getPropertyValue("--border").trim() || "#EAE0D4",
+    card: styles.getPropertyValue("--card").trim() || "#fff",
   };
 }
 
 function formatDateTime(value?: string | null) {
-  return value ? new Date(value).toLocaleString("id-ID", { dateStyle: "short", timeStyle: "short" }) : "Tidak dijadwalkan";
+  return value ? new Date(value).toLocaleString("en-US", { dateStyle: "short", timeStyle: "short" }) : "Not scheduled";
 }
 
 function formatDate(value?: string | null) {
-  return value ? new Date(value).toLocaleDateString("id-ID", { weekday: "short", day: "numeric", month: "short" }) : "-";
+  return value ? new Date(value).toLocaleDateString("en-US", { weekday: "short", day: "numeric", month: "short" }) : "-";
 }
 
 function getInitials(name: string) {
@@ -117,9 +119,25 @@ function TrendChart({ title, points }: { title: string; points: TrendPointDto[] 
 
   useEffect(() => {
     if (!canvasRef.current) return;
+    const ctx = canvasRef.current.getContext("2d");
+    if (!ctx) return;
+
     const palette = readChartPalette();
+    const gradient = ctx.createLinearGradient(0, 0, 0, 400);
+    // Parse the primary color to rgb for rgba usage if it's hex
+    const isHex = palette.primary.startsWith('#');
+    let r = 255, g = 107, b = 0;
+    if (isHex && palette.primary.length === 7) {
+      r = parseInt(palette.primary.slice(1, 3), 16);
+      g = parseInt(palette.primary.slice(3, 5), 16);
+      b = parseInt(palette.primary.slice(5, 7), 16);
+    }
+
+    gradient.addColorStop(0, `rgba(${r}, ${g}, ${b}, 0.25)`);
+    gradient.addColorStop(1, `rgba(${r}, ${g}, ${b}, 0.0)`);
+
     const chart = new Chart(canvasRef.current, {
-      type: "bar",
+      type: "line",
       data: {
         labels: points.map((item) => item.day),
         datasets: [
@@ -127,30 +145,86 @@ function TrendChart({ title, points }: { title: string; points: TrendPointDto[] 
             label: "Submissions",
             data: points.map((item) => item.submissions),
             borderColor: palette.primary,
-            backgroundColor: palette.primarySoft,
+            backgroundColor: gradient,
+            fill: true,
+            tension: 0.4, // smooth curve
+            pointBackgroundColor: palette.primary,
+            pointBorderColor: palette.card,
+            pointBorderWidth: 2,
+            pointRadius: 4,
+            pointHoverRadius: 6,
             yAxisID: "y",
-            borderRadius: 5,
+            borderWidth: 2.5,
           },
           {
             label: "Pass Rate (%)",
             data: points.map((item) => item.pass_rate),
             borderColor: palette.success,
-            backgroundColor: palette.successSoft,
+            backgroundColor: "transparent",
+            borderDash: [5, 5],
+            tension: 0.4,
+            pointRadius: 0,
+            pointHoverRadius: 4,
+            pointBackgroundColor: palette.success,
             yAxisID: "y1",
-            borderRadius: 5,
+            borderWidth: 2,
           },
         ],
       },
       options: {
         responsive: true,
         maintainAspectRatio: false,
+        interaction: {
+          mode: "index",
+          intersect: false,
+        },
         plugins: {
-          legend: { labels: { color: palette.textMuted } },
+          legend: {
+            position: "top",
+            align: "end",
+            labels: {
+              color: palette.textMuted,
+              usePointStyle: true,
+              boxWidth: 6,
+              font: { weight: "bold", size: 11, family: "'Plus Jakarta Sans', sans-serif" }
+            }
+          },
+          tooltip: {
+            backgroundColor: "rgba(10, 8, 6, 0.85)",
+            padding: 14,
+            titleFont: { size: 14, weight: "bold", family: "'Plus Jakarta Sans', sans-serif" },
+            bodyFont: { size: 13, family: "'Plus Jakarta Sans', sans-serif" },
+            cornerRadius: 12,
+            displayColors: true,
+            usePointStyle: true,
+            boxPadding: 6,
+            borderColor: "rgba(255,255,255,0.1)",
+            borderWidth: 1,
+            // @ts-ignore
+            backdropFilter: "blur(8px)",
+          }
         },
         scales: {
-          x: { ticks: { color: palette.textMuted }, grid: { color: palette.border } },
-          y: { beginAtZero: true, position: "left", ticks: { color: palette.textMuted }, grid: { color: palette.border } },
-          y1: { beginAtZero: true, position: "right", min: 0, max: 100, ticks: { color: palette.textMuted }, grid: { color: "transparent" } },
+          x: { 
+            ticks: { color: palette.textMuted, font: { size: 11, family: "'Plus Jakarta Sans', sans-serif" } }, 
+            grid: { display: false } 
+          },
+          y: {
+            beginAtZero: true,
+            position: "left",
+            ticks: { color: palette.textMuted, font: { size: 11, family: "'Plus Jakarta Sans', sans-serif" } },
+            grid: { color: "rgba(150,150,150,0.1)" },
+            border: { display: false, dash: [4, 4] }
+          },
+          y1: {
+            beginAtZero: true,
+            position: "right",
+            min: 0,
+            max: 100,
+            ticks: { display: false },
+            grid: { display: false },
+            border: { display: false }
+          },
         },
       },
     });
@@ -158,14 +232,25 @@ function TrendChart({ title, points }: { title: string; points: TrendPointDto[] 
   }, [points, themeMode]);
 
   return (
-    <section className="card dashboard-card-fill">
-      <p className="section-eyebrow">Primary View</p>
-      <h3 className="section-title-sm">{title}</h3>
-      <p className="state-text">Ritme submission dan pass rate 7 hari terakhir.</p>
-      <div className="chart-wrap" style={{ marginTop: 12 }}>
+    <motion.section
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="card dashboard-card-fill glass"
+      style={{ overflow: "hidden", padding: 0 }}
+    >
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "20px 24px", borderBottom: "1px solid var(--border)", marginBottom: 0 }}>
+        <div>
+          <p className="section-eyebrow" style={{ marginBottom: 4 }}>Performance Trend</p>
+          <h3 className="section-title-sm">{title}</h3>
+        </div>
+        <span className="pill badge-green" style={{ fontSize: 9 }}>
+          <ArrowUpRight size={11} /> LIVE
+        </span>
+      </div>
+      <div style={{ padding: "20px 24px", height: 320 }}>
         <canvas ref={canvasRef} />
       </div>
-    </section>
+    </motion.section>
   );
 }
 
@@ -175,26 +260,46 @@ function DashboardGreeting(props: {
   title: string;
   sub: string;
   badge?: string;
-  actions?: Array<{ label: string; variant?: "ghost"; onClick: () => void }>;
+  actions?: Array<{ label: string; variant?: "ghost"; icon?: ReactNode; onClick: () => void }>;
 }) {
   return (
-    <div className="dash-greeting">
-      <div className="dash-greeting-copy">
-        <h2 className="dash-greeting-title">{props.title}</h2>
-        <p className="dash-greeting-sub">{props.sub}</p>
+    <div className="dashboard-hero-main">
+      <div className="page-hero-copy">
+        <motion.h2
+          initial={{ opacity: 0, x: -16 }}
+          animate={{ opacity: 1, x: 0 }}
+          className="section-title"
+        >
+          {props.title}
+        </motion.h2>
+        <motion.p
+          initial={{ opacity: 0, x: -16 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.1 }}
+          className="section-desc"
+        >
+          {props.sub}
+        </motion.p>
       </div>
-      <div className="dash-greeting-actions">
-        {props.badge && <span className="dash-greeting-badge">{props.badge}</span>}
+      <motion.div
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ delay: 0.15 }}
+        className="row gap-sm dashboard-hero-actions page-actions"
+      >
+        {props.badge && (
+          <span className="pill badge-orange">{props.badge}</span>
+        )}
         {props.actions?.map((a) => (
           <button
             key={a.label}
-            className={a.variant === "ghost" ? "btn btn-ghost" : "btn"}
+            className={a.variant === "ghost" ? "btn btn-ghost" : "btn btn-primary"}
             onClick={a.onClick}
           >
-            {a.label}
+            {a.icon}{a.label}
           </button>
         ))}
-      </div>
+      </motion.div>
     </div>
   );
 }
@@ -203,39 +308,448 @@ function DashboardGreeting(props: {
 
 function DashboardHero(props: { children: ReactNode }) {
   return (
-    <section className="card dashboard-hero page-hero">
+    <section className="card dashboard-hero page-hero bg-gradient-to-br from-[var(--surface-1)] to-[var(--surface-2)]">
       {props.children}
     </section>
   );
 }
 
-// ─── InsightCard ─────────────────────────────────────────────────────────────
+// ─── AdminPulseCard ────────────────────────────────────────────────────────────
 
-function InsightCard({
-  eyebrow,
-  title,
-  description,
-  items,
+function AdminPulseCard({
+  totalUsers,
+  totalExams,
+  totalSubmissions,
+  trendDays,
 }: {
-  eyebrow: string;
-  title: string;
-  description: string;
-  items: Array<{ label: string; value: string; tone?: "default" | "accent" }>;
+  totalUsers: number;
+  totalExams: number;
+  totalSubmissions: number;
+  trendDays: number;
 }) {
   return (
-    <section className="card dashboard-card-fill">
-      <p className="section-eyebrow">{eyebrow}</p>
-      <h3 className="section-title-sm">{title}</h3>
-      <p className="state-text">{description}</p>
-      <div className="dashboard-list">
-        {items.map((item) => (
-          <div key={`${item.label}-${item.value}`} className="dashboard-list-item">
-            <span className="state-text">{item.label}</span>
-            <strong className={item.tone === "accent" ? "text-primary" : ""}>{item.value}</strong>
+    <motion.section
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="card"
+      style={{
+        background: "linear-gradient(145deg, var(--bg-1) 0%, var(--card) 100%)",
+        border: "1px solid var(--primary-border)",
+        boxShadow: "var(--shadow-sm)",
+        position: "relative",
+        overflow: "hidden",
+        height: "100%",
+        display: "flex",
+        flexDirection: "column",
+      }}
+    >
+      {/* Decorative background element */}
+      <div
+        style={{
+          position: "absolute",
+          top: -50,
+          right: -50,
+          width: 150,
+          height: 150,
+          background: "radial-gradient(circle, var(--info) 0%, transparent 70%)",
+          opacity: 0.1,
+          borderRadius: "50%",
+        }}
+      />
+
+      <div style={{ position: "relative", zIndex: 1, display: "flex", flexDirection: "column", flex: 1 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 24 }}>
+          <div>
+            <p className="section-eyebrow">Platform Overview</p>
+            <h3 className="section-title-sm" style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              Institutional Pulse
+              <span className="relative flex h-3 w-3">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-info opacity-75" />
+                <span className="relative inline-flex rounded-full h-3 w-3 bg-info" />
+              </span>
+            </h3>
+            <p className="state-text mt-1">Real-time capacity and engagement across your institution.</p>
           </div>
-        ))}
+          <div
+            style={{
+              background: "var(--info-bg)",
+              color: "var(--info)",
+              padding: "10px 16px",
+              borderRadius: 14,
+              fontWeight: 900,
+              fontSize: 26,
+              display: "flex",
+              alignItems: "baseline",
+              gap: 6,
+              border: "1px solid color-mix(in srgb, var(--info) 20%, transparent)",
+            }}
+          >
+            {totalUsers} <span style={{ fontSize: 13, fontWeight: 700, color: "var(--text-1)" }}>Active Users</span>
+          </div>
+        </div>
+
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 16, marginTop: "auto" }}>
+          {/* Metric 1 */}
+          <div style={{ background: "var(--bg-0)", padding: 18, borderRadius: 14, border: "1px solid var(--border)" }}>
+            <p className="state-text font-bold mb-3 flex items-center gap-2 text-primary">
+              <ClipboardList size={16} /> Total Exams
+            </p>
+            <div className="flex items-end gap-2">
+              <strong className="text-3xl font-black text-primary leading-none">{totalExams}</strong>
+              <span className="state-text font-medium text-primary/80 mb-1">created</span>
+            </div>
+          </div>
+
+          {/* Metric 2 */}
+          <div style={{ background: "var(--bg-0)", padding: 18, borderRadius: 14, border: "1px solid var(--border)" }}>
+            <p className="state-text font-bold mb-3 flex items-center gap-2 text-info">
+              <ArrowUpRight size={16} /> Submission Volume
+            </p>
+            <div className="flex items-end gap-2">
+              <strong className="text-3xl font-black text-info leading-none">{totalSubmissions}</strong>
+              <span className="state-text font-medium text-info/80 mb-1">completed</span>
+            </div>
+          </div>
+
+          {/* Metric 3 */}
+          <div style={{ background: "var(--bg-0)", padding: 18, borderRadius: 14, border: "1px solid var(--border)" }}>
+            <p className="state-text font-bold mb-3 flex items-center gap-2 text-violet">
+              <CalendarClock size={16} /> Trend Data
+            </p>
+            <div className="flex items-end gap-2">
+              <strong className="text-3xl font-black text-violet leading-none">{trendDays}</strong>
+              <span className="state-text font-medium text-violet/80 mb-1">days available</span>
+            </div>
+          </div>
+        </div>
       </div>
-    </section>
+    </motion.section>
+  );
+}
+
+// ─── TeachingPulseCard ─────────────────────────────────────────────────────────
+
+function TeachingPulseCard({
+  totalExams,
+  publishedExams,
+  totalSubmissions,
+  trendDays,
+}: {
+  totalExams: number;
+  publishedExams: number;
+  totalSubmissions: number;
+  trendDays: number;
+}) {
+  const publishRatio = totalExams > 0 ? Math.round((publishedExams / totalExams) * 100) : 0;
+
+  return (
+    <motion.section
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="card"
+      style={{
+        background: "linear-gradient(145deg, var(--bg-1) 0%, var(--card) 100%)",
+        border: "1px solid var(--primary-border)",
+        boxShadow: "var(--shadow-sm)",
+        position: "relative",
+        overflow: "hidden",
+        height: "100%",
+        display: "flex",
+        flexDirection: "column",
+      }}
+    >
+      {/* Decorative background element */}
+      <div
+        style={{
+          position: "absolute",
+          top: -50,
+          right: -50,
+          width: 150,
+          height: 150,
+          background: "radial-gradient(circle, var(--primary-3) 0%, transparent 70%)",
+          opacity: 0.15,
+          borderRadius: "50%",
+        }}
+      />
+
+      <div style={{ position: "relative", zIndex: 1, display: "flex", flexDirection: "column", flex: 1 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 24 }}>
+          <div>
+            <p className="section-eyebrow">Operational Focus</p>
+            <h3 className="section-title-sm" style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              Teaching Pulse
+              <span className="relative flex h-3 w-3">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75" />
+                <span className="relative inline-flex rounded-full h-3 w-3 bg-primary" />
+              </span>
+            </h3>
+            <p className="state-text mt-1">Real-time status of your active exams and engagement.</p>
+          </div>
+          <div
+            style={{
+              background: "var(--primary-bg)",
+              color: "var(--primary)",
+              padding: "10px 16px",
+              borderRadius: 14,
+              fontWeight: 900,
+              fontSize: 26,
+              display: "flex",
+              alignItems: "baseline",
+              gap: 6,
+              border: "1px solid var(--primary-border)",
+            }}
+          >
+            {totalExams} <span style={{ fontSize: 13, fontWeight: 700, color: "var(--text-1)" }}>Total Exams</span>
+          </div>
+        </div>
+
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 16, marginTop: "auto" }}>
+          {/* Metric 1 */}
+          <div style={{ background: "var(--bg-0)", padding: 18, borderRadius: 14, border: "1px solid var(--border)" }}>
+            <p className="state-text font-bold mb-3 flex items-center gap-2 text-success">
+              <Zap size={16} /> Published Ratio
+            </p>
+            <div className="flex items-end gap-2 mb-3">
+              <strong className="text-3xl font-black text-success leading-none">{publishRatio}%</strong>
+              <span className="state-text font-medium text-success/80 mb-1">{publishedExams} active</span>
+            </div>
+            <div className="progress-bar" style={{ height: 6, background: "var(--success-bg)" }}>
+              <div style={{ width: `${publishRatio}%`, background: "var(--success)" }} />
+            </div>
+          </div>
+
+          {/* Metric 2 */}
+          <div style={{ background: "var(--bg-0)", padding: 18, borderRadius: 14, border: "1px solid var(--border)" }}>
+            <p className="state-text font-bold mb-3 flex items-center gap-2 text-info">
+              <ArrowUpRight size={16} /> Submission Volume
+            </p>
+            <div className="flex items-end gap-2">
+              <strong className="text-3xl font-black text-info leading-none">{totalSubmissions}</strong>
+              <span className="state-text font-medium text-info/80 mb-1">completed</span>
+            </div>
+          </div>
+
+          {/* Metric 3 */}
+          <div style={{ background: "var(--bg-0)", padding: 18, borderRadius: 14, border: "1px solid var(--border)" }}>
+            <p className="state-text font-bold mb-3 flex items-center gap-2 text-violet">
+              <CalendarClock size={16} /> Trend Data
+            </p>
+            <div className="flex items-end gap-2">
+              <strong className="text-3xl font-black text-violet leading-none">{trendDays}</strong>
+              <span className="state-text font-medium text-violet/80 mb-1">days available</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </motion.section>
+  );
+}
+
+// ─── TopScorersCard (Podium) ─────────────────────────────────────────────────
+
+const PODIUM_CONFIG = [
+  {
+    rank: 1,
+    emoji: "🥇",
+    gradient: "linear-gradient(135deg, #FFD700 0%, #FFA500 100%)",
+    shadow: "0 4px 24px rgba(255, 215, 0, 0.25)",
+    border: "rgba(255, 215, 0, 0.4)",
+    bg: "rgba(255, 215, 0, 0.08)",
+    icon: Crown,
+    label: "1st",
+  },
+  {
+    rank: 2,
+    emoji: "🥈",
+    gradient: "linear-gradient(135deg, #C0C0C0 0%, #A8A8A8 100%)",
+    shadow: "0 4px 20px rgba(192, 192, 192, 0.2)",
+    border: "rgba(192, 192, 192, 0.35)",
+    bg: "rgba(192, 192, 192, 0.06)",
+    icon: Medal,
+    label: "2nd",
+  },
+  {
+    rank: 3,
+    emoji: "🥉",
+    gradient: "linear-gradient(135deg, #CD7F32 0%, #B8860B 100%)",
+    shadow: "0 4px 20px rgba(205, 127, 50, 0.2)",
+    border: "rgba(205, 127, 50, 0.3)",
+    bg: "rgba(205, 127, 50, 0.06)",
+    icon: Medal,
+    label: "3rd",
+  },
+];
+
+function TopScorersCard({ scorers }: { scorers: TopScorerDto[] }) {
+  return (
+    <motion.section
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.2 }}
+      className="card glass"
+      style={{ overflow: "hidden", padding: 0, height: "100%", display: "flex", flexDirection: "column" }}
+    >
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          padding: "20px 24px",
+          borderBottom: "1px solid var(--border)",
+        }}
+      >
+        <div>
+          <p className="section-eyebrow" style={{ marginBottom: 4 }}>
+            Leaderboard
+          </p>
+          <h3 className="section-title-sm">Top 3 Performers</h3>
+        </div>
+        <span className="pill badge-green" style={{ fontSize: 9 }}>
+          <ArrowUpRight size={11} /> LIVE
+        </span>
+      </div>
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: scorers.length >= 3 ? "1fr 1fr 1fr" : `repeat(${scorers.length}, 1fr)`,
+          gap: 16,
+          padding: "20px 24px",
+          flex: 1,
+          alignItems: "end",
+        }}
+      >
+        {scorers.map((scorer, index) => {
+          const config = PODIUM_CONFIG[index] ?? PODIUM_CONFIG[2];
+          const IconComp = config.icon;
+          return (
+            <motion.div
+              key={scorer.student_id + scorer.exam_title}
+              initial={{ opacity: 0, scale: 0.9, y: 16 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              transition={{ delay: 0.3 + index * 0.12 }}
+              style={{
+                position: "relative",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                gap: 10,
+                padding: "24px 16px 20px",
+                borderRadius: 16,
+                background: config.bg,
+                border: `1px solid ${config.border}`,
+                boxShadow: config.shadow,
+                transition: "transform 0.25s ease, box-shadow 0.25s ease",
+                cursor: "default",
+              }}
+              whileHover={{ y: -4, boxShadow: config.shadow.replace("0.2", "0.4").replace("0.25", "0.45") }}
+            >
+              {/* Rank badge */}
+              <div
+                style={{
+                  width: 40,
+                  height: 40,
+                  borderRadius: "50%",
+                  background: config.gradient,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  boxShadow: `0 2px 12px rgba(0,0,0,0.15)`,
+                }}
+              >
+                <IconComp size={20} color="#fff" strokeWidth={2.5} />
+              </div>
+
+              {/* Avatar */}
+              <div
+                style={{
+                  width: 48,
+                  height: 48,
+                  borderRadius: "50%",
+                  background: "var(--bg-3)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: 18,
+                  fontWeight: 700,
+                  color: "var(--text-1)",
+                  border: "2px solid var(--border)",
+                  boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+                }}
+              >
+                {scorer.student_name.charAt(0).toUpperCase()}
+              </div>
+
+              {/* Name */}
+              <strong
+                style={{
+                  fontSize: 14,
+                  textAlign: "center",
+                  lineHeight: 1.3,
+                  color: "var(--text-0)",
+                  maxWidth: "100%",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {scorer.student_name}
+              </strong>
+
+              {/* Score */}
+              <div
+                style={{
+                  fontSize: 28,
+                  fontWeight: 900,
+                  background: config.gradient,
+                  WebkitBackgroundClip: "text",
+                  WebkitTextFillColor: "transparent",
+                  lineHeight: 1,
+                }}
+              >
+                {scorer.score.toFixed(1)}
+              </div>
+
+              {/* Exam title */}
+              <p
+                className="state-text"
+                style={{
+                  fontSize: 11,
+                  textAlign: "center",
+                  maxWidth: "100%",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
+                  marginTop: -4,
+                }}
+              >
+                {scorer.exam_title}
+              </p>
+
+              {/* Rank label */}
+              <span
+                className="pill"
+                style={{
+                  fontSize: 10,
+                  fontWeight: 700,
+                  background: config.gradient,
+                  color: "#fff",
+                  border: "none",
+                  padding: "2px 10px",
+                }}
+              >
+                {config.emoji} {config.label}
+              </span>
+            </motion.div>
+          );
+        })}
+      </div>
+      {scorers.length === 0 && (
+        <div style={{ padding: "32px 24px", textAlign: "center" }}>
+          <Trophy size={32} style={{ opacity: 0.3, marginBottom: 8 }} />
+          <p className="state-text">No scores available yet.</p>
+        </div>
+      )}
+    </motion.section>
   );
 }
 
@@ -255,19 +769,26 @@ function CompactListCard({
   emptyLabel: string;
 }) {
   return (
-    <section className="card dashboard-card-fill">
+    <section className="card dashboard-card-fill glass hover:border-[var(--primary-border)] transition-colors duration-300">
       <p className="section-eyebrow">{eyebrow}</p>
       <h3 className="section-title-sm">{title}</h3>
       <p className="state-text">{description}</p>
-      <div className="dashboard-list">
-        {items.length === 0 ? <p className="state-text">{emptyLabel}</p> : null}
+      <div className="dashboard-list mt-4">
+        {items.length === 0 ? (
+          <div className="py-8 flex flex-col items-center justify-center text-center">
+            <div className="w-12 h-12 rounded-full bg-[var(--bg-2)] flex items-center justify-center text-[var(--text-3)] mb-3">
+              <ClipboardList size={24} />
+            </div>
+            <p className="state-text">{emptyLabel}</p>
+          </div>
+        ) : null}
         {items.map((item) => (
-          <article key={item.id} className="dashboard-list-card">
+          <article key={item.id} className="dashboard-list-card hover:-translate-y-0.5 transition-transform">
             <div className="dashboard-list-head">
-              <strong>{item.title}</strong>
+              <strong className="text-[var(--text-0)]">{item.title}</strong>
               {item.status ?? (item.trailing ? <span className="pill p-neu">{item.trailing}</span> : null)}
             </div>
-            <p className="state-text">{item.meta}</p>
+            <p className="state-text mt-1">{item.meta}</p>
           </article>
         ))}
       </div>
@@ -279,17 +800,7 @@ function CompactListCard({
 
 function DashboardSkeleton() {
   return (
-    <section className="panel-grid dashboard-shell" data-tour="dashboard">
-      <CorePageTour
-        page="dashboard"
-        title="Mulai dari Dashboard"
-        description="Dashboard merangkum performa tenant aktif dan membantu validasi cepat setelah publish ujian."
-        bullets={[
-          "Pantau metrik utama dan trend 7 hari tanpa pindah halaman.",
-          "Gunakan struktur yang sama untuk seluruh role supaya navigasi tetap familiar.",
-          "Dashboard ini adalah langkah pertama pada tour beta Sprint 12.",
-        ]}
-      />
+    <section className="panel-grid dashboard-shell">
       <section className="page-hero card dashboard-hero">
         <LoadingSkeleton card lines={3} />
       </section>
@@ -303,20 +814,16 @@ function DashboardSkeleton() {
         <LoadingSkeleton card lines={5} />
         <LoadingSkeleton card lines={5} />
       </div>
-      <div className="dashboard-grid">
-        <LoadingSkeleton card lines={5} />
-        <LoadingSkeleton card lines={5} />
-      </div>
     </section>
   );
 }
 
 function DashboardError({ message }: { message: string }) {
   return (
-    <section className="panel-grid dashboard-shell" data-tour="dashboard">
+    <section className="panel-grid dashboard-shell">
       <section className="card surface-muted accent">
         <p className="section-eyebrow">Dashboard State</p>
-        <h3 className="section-title-sm">Dashboard belum bisa dimuat</h3>
+        <h3 className="section-title-sm">Failed to load dashboard</h3>
         <p className="state-text error">{message}</p>
       </section>
     </section>
@@ -325,84 +832,20 @@ function DashboardError({ message }: { message: string }) {
 
 // ─── SUPER ADMIN DASHBOARD ───────────────────────────────────────────────────
 
-function SystemHealthCard() {
-  const health = [
-    { label: "API Response", value: 98, color: "var(--success)" },
-    { label: "Database", value: 100, color: "var(--success)" },
-    { label: "AI Service", value: 94, color: "var(--warning)" },
-    { label: "Storage", value: 72, color: "var(--primary)" },
-  ];
-
-  return (
-    <section className="card">
-      <p className="section-eyebrow">System</p>
-      <h3 className="section-title-sm">Status Sistem</h3>
-      <div className="dash-health-list">
-        {health.map((item) => (
-          <div key={item.label} className="dash-health-row">
-            <div className="dash-health-label-row">
-              <p className="dash-health-label">{item.label}</p>
-              <p className="dash-health-value" style={{ color: item.color }}>{item.value}%</p>
-            </div>
-            <div className="progress-bar">
-              <div style={{ width: `${item.value}%`, background: item.color }} />
-            </div>
-          </div>
-        ))}
-      </div>
-    </section>
-  );
-}
-
-function PlatformActivityCard() {
-  const activities = [
-    { icon: Building2, color: "var(--violet)", bg: "var(--violet-bg)", text: "SMAN 3 Depok mendaftar paket Enterprise", time: "5 mnt lalu" },
-    { icon: Users, color: "var(--success)", bg: "var(--success-bg)", text: "1,240 siswa berhasil login ujian nasional", time: "12 mnt lalu" },
-    { icon: Sparkles, color: "var(--warning)", bg: "var(--warning-bg)", text: "AI generate 450 soal baru untuk SMKN 7", time: "1 jam lalu" },
-    { icon: ShieldCheck, color: "var(--danger)", bg: "var(--danger-bg)", text: "Percobaan akses tidak sah terblokir (×3)", time: "2 jam lalu" },
-  ];
-
-  return (
-    <section className="card">
-      <p className="section-eyebrow">Live Feed</p>
-      <h3 className="section-title-sm">Aktivitas Terbaru</h3>
-      <div className="dash-activity-list">
-        {activities.map((item) => {
-          const IconComp = item.icon;
-          return (
-            <div key={item.text} className="dash-activity-item">
-              <span
-                className="dash-activity-icon"
-                style={{ background: item.bg, color: item.color }}
-              >
-                <IconComp size={14} />
-              </span>
-              <div className="dash-activity-copy">
-                <p className="dash-activity-text">{item.text}</p>
-                <p className="dash-activity-time">{item.time}</p>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    </section>
-  );
-}
-
 function AiUsageCard({ usageRows }: { usageRows: TenantUsageRow[] }) {
   const totalAiUsed = usageRows.reduce((acc, row) => acc + row.ai_credits_used, 0);
   const totalAiQuota = usageRows.reduce((acc, row) => acc + row.ai_credits_quota, 0);
   const pct = totalAiQuota > 0 ? Math.round((totalAiUsed / totalAiQuota) * 100) : 0;
 
   return (
-    <div className="dash-ai-usage-card">
-      <p className="dash-ai-kicker">AI Usage Platform</p>
-      <p className="dash-ai-value">{totalAiUsed.toLocaleString("id-ID")}</p>
-      <p className="dash-ai-desc">Total AI credits terpakai di seluruh tenant aktif.</p>
-      <div className="progress-bar">
+    <div className="dash-ai-usage-card hover:scale-[1.02] transition-transform h-full">
+      <p className="dash-ai-kicker">Platform AI Usage</p>
+      <p className="dash-ai-value">{totalAiUsed.toLocaleString("en-US")}</p>
+      <p className="dash-ai-desc">Total AI credits consumed across all active tenants.</p>
+      <div className="progress-bar mt-4">
         <div style={{ width: `${pct}%` }} />
       </div>
-      <p className="dash-activity-time">{pct}% dari limit platform ({totalAiQuota.toLocaleString("id-ID")} total)</p>
+      <p className="dash-activity-time mt-2">{pct}% of platform limit ({totalAiQuota.toLocaleString("en-US")} total)</p>
     </div>
   );
 }
@@ -433,18 +876,19 @@ function SuperAdminDashboard({
   const totalAiUsed = usageRows.reduce((acc, r) => acc + r.ai_credits_used, 0);
   const totalAiQuota = usageRows.reduce((acc, r) => acc + r.ai_credits_quota, 0);
   const activeTenants = usageRows.filter((r) => r.is_active).length;
+
+  // Real data for watchlists
   const watchlistRows = [...usageRows].sort((a, b) => b.usage_pct - a.usage_pct).slice(0, 5);
 
   return (
     <>
-      {/* Hero */}
       <DashboardHero>
         <DashboardGreeting
-          title="Platform Overview — Super Admin 🛡️"
+          title="Platform Overview 🛡️"
           sub={
             activeTenantId
-              ? `Tenant scope aktif: ${activeTenantId.slice(0, 8)}... · Dashboard global tetap tersedia.`
-              : `${rows.length} tenant terdaftar · ${activeTenants} aktif · Minggu, ${new Date().toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })}`
+              ? `Active tenant scope: ${activeTenantId.slice(0, 8)}... · Global dashboard remains available.`
+              : `${rows.length} registered tenants · ${activeTenants} active · ${new Date().toLocaleDateString("en-US", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}`
           }
           actions={[
             ...(activeTenantId ? [{ label: "Clear Scope", variant: "ghost" as const, onClick: onClearScope }] : []),
@@ -455,58 +899,57 @@ function SuperAdminDashboard({
           <p className="stat-label">Platform Scope</p>
           <p className="state-text">
             {activeTenantId
-              ? `Scopeed ke tenant ${activeTenantId.slice(0, 8)}. Dashboard tetap membaca overview global dari /platform/tenants.`
-              : "Tidak ada tenant scope aktif. Menampilkan gambaran global seluruh tenant di platform."}
+              ? `Scoped to tenant ${activeTenantId.slice(0, 8)}. Dashboard reads global overview from /platform/tenants.`
+              : "No active tenant scope. Viewing global platform metrics."}
           </p>
         </div>
       </DashboardHero>
 
-      {/* KPI Stats */}
       <section className="metric-grid">
         <StatCard
           label="Total Tenants"
           value={usageRows.length}
-          caption="Tenant terdaftar di platform."
+          caption="Registered on platform."
           icon={<Building2 size={20} />}
           accent="violet"
-          trend={6}
-          sparkData={[30, 32, 35, 38, 40, 43, 45, usageRows.length]}
+          className="stat-card-hoverable"
+          delay={0.1}
         />
         <StatCard
           label="Active Tenants"
           value={activeTenants}
-          caption="Tenant aktif dan bisa dioperasikan."
+          caption="Operational tenants."
           icon={<ShieldCheck size={20} />}
           accent="success"
-          trend={0}
+          className="stat-card-hoverable"
+          delay={0.2}
         />
         <StatCard
           label="Platform Users"
-          value={totalUsers.toLocaleString("id-ID")}
-          caption={`${totalUsersQuota.toLocaleString("id-ID")} kuota tersedia.`}
+          value={totalUsers.toLocaleString("en-US")}
+          caption={`${totalUsersQuota.toLocaleString("en-US")} available quota.`}
           icon={<Users size={20} />}
           accent="info"
           progress={totalUsersQuota > 0 ? (totalUsers / totalUsersQuota) * 100 : 0}
-          trend={12}
-          sparkData={[48, 51, 53, 55, 57, 59, 61, totalUsers]}
+          className="stat-card-hoverable"
+          delay={0.3}
         />
         <StatCard
           label="AI Credits Used"
-          value={totalAiUsed.toLocaleString("id-ID")}
-          caption={`${totalAiQuota.toLocaleString("id-ID")} limit kredit AI.`}
+          value={totalAiUsed.toLocaleString("en-US")}
+          caption={`${totalAiQuota.toLocaleString("en-US")} credit limit.`}
           icon={<BrainCircuit size={20} />}
           accent="warning"
           progress={totalAiQuota > 0 ? (totalAiUsed / totalAiQuota) * 100 : 0}
-          trend={18}
+          className="stat-card-hoverable"
+          delay={0.4}
         />
       </section>
 
-      {/* Mid Grid: Tenant table + System */}
       <section className="dashboard-grid">
-        {/* Tenant table */}
-        <section className="card">
+        <section className="card glass hover:border-[var(--primary-border)] transition-colors duration-300">
           <p className="section-eyebrow">Tenant Overview</p>
-          <h3 className="section-title-sm">Sekolah Aktif</h3>
+          <h3 className="section-title-sm">Active Organizations</h3>
           <div style={{ marginTop: 10 }}>
             {usageRows.slice(0, 6).map((row, i) => (
               <div key={row.id} className="dash-tenant-row">
@@ -519,25 +962,27 @@ function SuperAdminDashboard({
                   <span className="pill p-neu">{row.plan}</span>
                   <span
                     className={`dash-status-dot ${row.is_active ? "active" : "inactive"}`}
-                    title={row.is_active ? "Aktif" : "Nonaktif"}
+                    title={row.is_active ? "Active" : "Inactive"}
                   />
                 </div>
               </div>
             ))}
             {usageRows.length === 0 && (
-              <p className="state-text" style={{ padding: "16px" }}>Belum ada tenant.</p>
+              <div className="py-8 flex flex-col items-center justify-center text-center">
+                <div className="w-12 h-12 rounded-full bg-[var(--bg-2)] flex items-center justify-center text-[var(--text-3)] mb-3">
+                  <Building2 size={24} />
+                </div>
+                <p className="state-text">No tenants registered yet.</p>
+              </div>
             )}
           </div>
         </section>
 
-        {/* Right: System Health + AI Usage */}
         <div className="panel-grid">
-          <SystemHealthCard />
           <AiUsageCard usageRows={usageRows} />
         </div>
       </section>
 
-      {/* Bottom: Watchlist + Activity */}
       <section className="dashboard-grid">
         <DataTable
           title="Capacity Watchlist"
@@ -548,217 +993,56 @@ function SuperAdminDashboard({
             { key: "ai", header: "AI%", render: (row) => `${Math.round(row.ai_usage_pct)}%` },
             { key: "status", header: "Status", render: (row) => <StatusBadge value={row.is_active ? "active" : "inactive"} /> },
           ]}
-          emptyLabel="Belum ada tenant pada watchlist."
+          emptyLabel="No tenants on watchlist."
         />
-        <PlatformActivityCard />
       </section>
     </>
   );
 }
 
-// ─── ADMIN DASHBOARD ─────────────────────────────────────────────────────────
+// ─── ADMIN/GURU COMBINED DASHBOARD ───────────────────────────────────────────
 
-const ADMIN_TEACHERS = [
-  { name: "Budi Santoso", subject: "Matematika", exams: 12, avgScore: 78, colorIndex: 0 },
-  { name: "Sari Dewi", subject: "Bahasa Inggris", exams: 8, avgScore: 82, colorIndex: 1 },
-  { name: "Rudi Hartono", subject: "Kimia", exams: 15, avgScore: 74, colorIndex: 2 },
-  { name: "Andi Pratama", subject: "Fisika", exams: 10, avgScore: 80, colorIndex: 3 },
-];
-
-const CLASS_DIST = [
-  { label: "Kelas X", value: 420, total: 1240, accentColor: "var(--primary)" },
-  { label: "Kelas XI", value: 390, total: 1240, accentColor: "var(--info)" },
-  { label: "Kelas XII", value: 430, total: 1240, accentColor: "var(--success)" },
-];
-
-function TeacherPerformanceSection() {
+function AiBannerAdmin({ onAction }: { onAction: () => void }) {
   return (
-    <section className="card">
-      <p className="section-eyebrow">Performa</p>
-      <h3 className="section-title-sm">Performa Guru</h3>
-      <div className="dash-teacher-grid">
-        {ADMIN_TEACHERS.map((t) => (
-          <div key={t.name} className="dash-teacher-card">
-            <div className="dash-teacher-head">
-              <DashAvatar name={t.name} size="md" colorIndex={t.colorIndex} />
-              <div className="dash-teacher-info">
-                <p className="dash-teacher-name">{t.name}</p>
-                <p className="dash-teacher-subject">{t.subject}</p>
-              </div>
-            </div>
-            <div className="dash-teacher-stats">
-              <div className="dash-teacher-stat">
-                <span className="dash-teacher-stat-value" style={{ color: AVATAR_COLORS[t.colorIndex].fg }}>
-                  {t.exams}
-                </span>
-                <span className="dash-teacher-stat-label">Ujian</span>
-              </div>
-              <div className="dash-teacher-stat">
-                <span className="dash-teacher-stat-value">{t.avgScore}</span>
-                <span className="dash-teacher-stat-label">Avg Nilai</span>
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-    </section>
-  );
-}
-
-function ClassDistributionCard() {
-  return (
-    <section className="card">
-      <p className="section-eyebrow">Distribusi</p>
-      <h3 className="section-title-sm">Distribusi Kelas</h3>
-      <div className="dash-class-dist">
-        {CLASS_DIST.map((item) => (
-          <div key={item.label} className="dash-class-dist-row">
-            <div className="dash-class-dist-label-row">
-              <span className="dash-class-dist-label">{item.label}</span>
-              <span className="dash-class-dist-count">{item.value} siswa</span>
-            </div>
-            <div className="progress-bar">
-              <div style={{ width: `${(item.value / item.total) * 100}%`, background: item.accentColor }} />
-            </div>
-          </div>
-        ))}
-      </div>
-      <div className="dash-target-card">
-        <p className="dash-target-kicker">🎯 Target Semester</p>
-        <p className="dash-target-label">Rata-rata nilai ≥ 80 untuk semua kelas</p>
-        <div className="progress-bar">
-          <div style={{ width: "76%" }} />
-        </div>
-        <p className="dash-target-note">76% menuju target semester ini</p>
-      </div>
-    </section>
-  );
-}
-
-// ─── GURU DASHBOARD ──────────────────────────────────────────────────────────
-
-const GURU_RECENT_RESULTS = [
-  { name: "Andi Prasetyo", score: 92, kelas: "XII IPA 1", grade: "A" },
-  { name: "Bela Kusuma", score: 88, kelas: "XII IPA 1", grade: "A" },
-  { name: "Candra Wijaya", score: 74, kelas: "XII IPA 1", grade: "B" },
-  { name: "Dewi Lestari", score: 68, kelas: "XII IPA 2", grade: "C" },
-  { name: "Eka Putra", score: 95, kelas: "XII IPA 2", grade: "A" },
-];
-
-function AiBannerGuru({ onGenerate }: { onGenerate: () => void }) {
-  return (
-    <div className="dash-banner dash-banner-ai">
-      <div className="dash-banner-icon">
-        <Brain size={22} />
+    <div className="dash-banner dash-banner-admin hover:-translate-y-1 transition-transform cursor-pointer" onClick={onAction}>
+      <div className="dash-banner-icon bg-white/20">
+        <Wand2 size={24} className="animate-pulse" />
       </div>
       <div className="dash-banner-copy" style={{ flex: 1 }}>
-        <p className="dash-banner-kicker">✨ AI Generator Tersedia</p>
-        <h3 className="dash-banner-title">Buat 40 soal dalam 30 detik dengan AI</h3>
-        <p className="dash-banner-desc">Kurikulum Merdeka · Kelas XII · Pilihan Ganda & Essay</p>
+        <p className="dash-banner-kicker">🛡️ Institutional Management</p>
+        <h3 className="dash-banner-title text-2xl font-black">Generate smart reports and manage your organization</h3>
+        <p className="dash-banner-desc font-medium">Full diagnostic control over users, classes, and exams</p>
       </div>
-      <button className="dash-banner-btn" onClick={onGenerate}>
-        Generate Soal →
+      <button className="dash-banner-btn shadow-lg">
+        Create New Exam →
       </button>
     </div>
   );
 }
 
-function GuruRecentResultsCard() {
+function AiBannerGuru({ onGenerate }: { onGenerate: () => void }) {
   return (
-    <section className="card dashboard-card-fill">
-      <p className="section-eyebrow">Nilai Terbaru</p>
-      <h3 className="section-title-sm">Hasil Siswa</h3>
-      <p className="state-text">Nilai terakhir dari ujian yang kamu kelola.</p>
-      <div className="dash-result-list">
-        {GURU_RECENT_RESULTS.map((r, i) => {
-          const scoreColor =
-            r.score >= 90 ? "var(--success)" : r.score >= 75 ? "var(--primary)" : "var(--warning)";
-          return (
-            <div key={r.name} className="dash-result-row">
-              <DashAvatar name={r.name} size="sm" colorIndex={i} />
-              <div className="dash-result-info">
-                <p className="dash-result-name">{r.name}</p>
-                <p className="dash-result-class">{r.kelas}</p>
-              </div>
-              <div className="dash-result-score">
-                <p className="dash-score-value" style={{ color: scoreColor }}>{r.score}</p>
-                <p className="dash-score-grade">Grade {r.grade}</p>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    </section>
-  );
-}
-
-// ─── SISWA DASHBOARD ─────────────────────────────────────────────────────────
-
-const SISWA_LEADERBOARD = [
-  { rank: 1, name: "Eka Putra", score: 95.2, isMe: false },
-  { rank: 2, name: "Andi Prasetyo", score: 92.1, isMe: false },
-  { rank: 3, name: "Saya", score: 88.4, isMe: true },
-  { rank: 4, name: "Bela Kusuma", score: 87.9, isMe: false },
-  { rank: 5, name: "Candra Wijaya", score: 85.3, isMe: false },
-];
-
-function UrgentExamBanner({ exam }: { exam: { title: string; meta: string } | null }) {
-  if (!exam) return null;
-  return (
-    <div className="dash-banner dash-banner-urgent">
-      <div className="dash-banner-icon">
-        <Clock size={22} />
+    <div className="dash-banner dash-banner-guru hover:-translate-y-1 transition-transform cursor-pointer" onClick={onGenerate}>
+      <div className="dash-banner-icon bg-white/20">
+        <Wand2 size={24} className="animate-pulse" />
       </div>
       <div className="dash-banner-copy" style={{ flex: 1 }}>
-        <p className="dash-banner-kicker">⚠️ Ujian Besok!</p>
-        <h3 className="dash-banner-title">{exam.title}</h3>
-        <p className="dash-banner-desc">{exam.meta}</p>
+        <p className="dash-banner-kicker">✨ AI Assistant</p>
+        <h3 className="dash-banner-title text-2xl font-black">Generate questions with AI</h3>
+        <p className="dash-banner-desc font-medium">Create and manage your exams faster with smart AI assistance</p>
       </div>
-      <button className="dash-banner-btn">Detail →</button>
+      <button className="dash-banner-btn shadow-lg">
+        Generate Question →
+      </button>
     </div>
   );
 }
 
-function LeaderboardCard() {
-  return (
-    <section className="card dashboard-card-fill">
-      <p className="section-eyebrow">Peringkat</p>
-      <h3 className="section-title-sm">
-        <Trophy size={16} style={{ display: "inline", marginRight: 6, color: "var(--warning)" }} />
-        Leaderboard Kelas
-      </h3>
-      <p className="state-text">Peringkat dari semua ujian di kelas aktif.</p>
-      <div className="dash-leaderboard-list">
-        {SISWA_LEADERBOARD.map((item) => (
-          <div key={item.rank} className={`dash-leaderboard-row ${item.isMe ? "is-me" : ""}`}>
-            <span className={`dash-rank rank-${item.rank}`}>
-              {item.rank <= 3 ? ["🥇", "🥈", "🥉"][item.rank - 1] : `#${item.rank}`}
-            </span>
-            <DashAvatar name={item.name} size="sm" colorIndex={item.rank - 1} />
-            <div className="dash-leaderboard-info">
-              <p className="dash-leaderboard-name">{item.name}{item.isMe ? " (Kamu)" : ""}</p>
-            </div>
-            <p className="dash-leaderboard-score">{item.score.toFixed(1)}</p>
-          </div>
-        ))}
-      </div>
-    </section>
-  );
-}
-
-// ─── ADMIN/GURU COMBINED DASHBOARD ───────────────────────────────────────────
-
 function AdminGuruDashboard({
   data,
-  stats,
-  onOpenPrimary,
-  onOpenSecondary,
   onNavigateAI,
 }: {
   data: DashboardAdminSummaryDto | DashboardGuruSummaryDto;
-  stats?: DashboardStatsDto;
-  onOpenPrimary: () => void;
-  onOpenSecondary: () => void;
   onNavigateAI: () => void;
 }) {
   const trendRows: TrendRow[] = data.trend_7d.map((item) => ({ ...item, id: item.day }));
@@ -771,153 +1055,68 @@ function AdminGuruDashboard({
 
   return (
     <>
-      {/* Hero */}
-      <DashboardHero>
-        <DashboardGreeting
-          title={isAdmin ? "Dashboard Sekolah 🏫" : "Halo, Selamat datang! ✏️"}
-          sub={
-            isAdmin
-              ? stats?.tenant
-                ? `${stats.tenant.users_count} users · ${stats.tenant.users_quota} kuota · ${stats.tenant.ai_credits_used}/${stats.tenant.ai_credits_quota} AI credits`
-                : "Platform Assessment Multi-Peran"
-              : `${guruExam} ujian dibuat · ${guruPublished} dipublikasikan · 3 kelas aktif`
-          }
-          actions={
-            isAdmin
-              ? [
-                { label: "Users", variant: "ghost", onClick: onOpenSecondary },
-                { label: "Reports →", onClick: onOpenPrimary },
-              ]
-              : [
-                { label: "Question Bank", variant: "ghost", onClick: onOpenSecondary },
-                { label: "Exams →", onClick: onOpenPrimary },
-              ]
-          }
-        />
-      </DashboardHero>
+      {isAdmin ? (
+        <AiBannerAdmin onAction={onNavigateAI} />
+      ) : (
+        <AiBannerGuru onGenerate={onNavigateAI} />
+      )}
 
-      {/* AI Banner (guru only) */}
-      {!isAdmin && <AiBannerGuru onGenerate={onNavigateAI} />}
-
-      {/* KPI Stats */}
-      <section className="metric-grid">
-        {isAdmin ? (
-          <>
-            <StatCard
-              label="Users"
-              value={data.users_total}
-              caption="Akun aktif pada tenant."
-              icon={<Users size={20} />}
-              accent="info"
-              trend={3}
-              sparkData={[180, 195, 210, 220, 230, 238, 245, data.users_total]}
-            />
-            <StatCard
-              label="Classes"
-              value={data.classes_total}
-              caption="Ruang belajar aktif."
-              icon={<GraduationCap size={20} />}
-              accent="violet"
-              trend={0}
-            />
-          </>
-        ) : (
-          <>
-            <StatCard
-              label="Exams"
-              value={guruExam}
-              caption="Ujian yang kamu buat."
-              icon={<ClipboardList size={20} />}
-              accent="primary"
-              trend={0}
-            />
-            <StatCard
-              label="Published"
-              value={guruPublished}
-              caption="Ujian siap untuk siswa."
-              icon={<Zap size={20} />}
-              accent="success"
-              trend={15}
-              sparkData={[1, 1, 2, 3, 3, 4, 4, guruPublished]}
-            />
-          </>
-        )}
+      <section className="metric-grid" style={{ marginTop: 18 }}>
         <StatCard
           label="Submissions"
           value={data.submissions_total}
-          caption="Submission masuk periode aktif."
+          caption="Completed assessments."
           icon={<ArrowUpRight size={20} />}
           accent="teal"
-          trend={8}
-          sparkData={[120, 134, 150, 160, 178, 190, 205, data.submissions_total]}
+          className="stat-card-hoverable"
+          delay={0.3}
         />
         <StatCard
           label="Avg Score"
           value={data.avg_score.toFixed(1)}
-          caption="Rata-rata skor tenant aktif."
-          icon={<ArrowUpRight size={20} />}
+          caption="Avg exam performance."
+          icon={<Trophy size={20} />}
           accent="warning"
-          trend={4}
-          sparkData={[70, 72, 73, 74, 75, 76, 76.4, data.avg_score]}
+          className="stat-card-hoverable"
+          delay={0.4}
         />
         <StatCard
           label="Pass Rate"
           value={`${data.pass_rate.toFixed(1)}%`}
-          caption="Persentase kelulusan aktif."
+          caption="Overall success rate."
           icon={<ShieldCheck size={20} />}
           accent="success"
-          trend={2}
-          sparkData={[78, 79, 80, 81, 81, 82, 82, data.pass_rate]}
+          className="stat-card-hoverable"
+          delay={0.5}
         />
       </section>
 
-      {/* Primary Grid: Chart + Insight */}
-      <section className="dashboard-grid">
+      <section className="dashboard-grid" style={{ marginTop: 18 }}>
+        <TopScorersCard scorers={data.top_scorers ?? []} />
+        {isAdmin ? (
+          <AdminPulseCard
+            totalUsers={data.users_total}
+            totalExams={adminData.exams_total}
+            totalSubmissions={data.submissions_total}
+            trendDays={trendRows.length}
+          />
+        ) : (
+          <TeachingPulseCard
+            totalExams={guruExam}
+            publishedExams={guruPublished}
+            totalSubmissions={data.submissions_total}
+            trendDays={trendRows.length}
+          />
+        )}
+      </section>
+
+      <section className="dashboard-grid" style={{ marginTop: 18 }}>
         <TrendChart
-          title={isAdmin ? "Trend 7 Hari Tenant" : "Trend 7 Hari Ujian Guru"}
+          title={isAdmin ? "Tenant 7-Day Trend" : "Teacher 7-Day Trend"}
           points={data.trend_7d}
         />
-        <InsightCard
-          eyebrow="Operational Focus"
-          title={isAdmin ? "Snapshot Tenant Aktif" : "Teaching Pulse"}
-          description={
-            isAdmin
-              ? "Quick diagnostic sebelum pindah ke halaman manajemen."
-              : "Kondisi ujian guru tanpa mengubah struktur dashboard."
-          }
-          items={
-            isAdmin
-              ? [
-                {
-                  label: "Users vs Quota",
-                  value: stats?.tenant ? `${stats.tenant.users_count}/${stats.tenant.users_quota}` : "Memuat…",
-                  tone: "accent",
-                },
-                {
-                  label: "AI Credits",
-                  value: stats?.tenant ? `${stats.tenant.ai_credits_used}/${stats.tenant.ai_credits_quota}` : "Memuat…",
-                },
-                { label: "Exams", value: `${adminData.exams_total} total` },
-                { label: "Submissions", value: `${data.submissions_total}` },
-              ]
-              : [
-                {
-                  label: "Published ratio",
-                  value: guruExam > 0 ? `${Math.round((guruPublished / guruExam) * 100)}%` : "0%",
-                  tone: "accent",
-                },
-                { label: "Submission volume", value: `${data.submissions_total} submission` },
-                { label: "Trend data", value: `${trendRows.length} hari` },
-                { label: "Next action", value: "Question bank & exams" },
-              ]
-          }
-        />
-      </section>
-
-      {/* Secondary Grid: Table + teacher/class */}
-      <section className="dashboard-grid">
         <DataTable
-          title="Trend Detail"
+          title="Performance Detail"
           rows={trendRows}
           columns={[
             { key: "day", header: "Date", render: (row) => row.day },
@@ -925,18 +1124,31 @@ function AdminGuruDashboard({
             { key: "avg_score", header: "Avg Score", render: (row) => row.avg_score.toFixed(2) },
             { key: "pass_rate", header: "Pass Rate (%)", render: (row) => row.pass_rate.toFixed(2) },
           ]}
-          emptyLabel="Belum ada data trend 7 hari."
+          emptyLabel="No 7-day trend data available."
         />
-        {isAdmin ? <ClassDistributionCard /> : <GuruRecentResultsCard />}
       </section>
-
-      {/* Admin-only: Teacher performance */}
-      {isAdmin && <TeacherPerformanceSection />}
     </>
   );
 }
 
 // ─── STUDENT DASHBOARD ───────────────────────────────────────────────────────
+
+function UrgentExamBanner({ exam }: { exam: { title: string; meta: string } | null }) {
+  if (!exam) return null;
+  return (
+    <div className="dash-banner dash-banner-urgent hover:-translate-y-1 transition-transform cursor-pointer">
+      <div className="dash-banner-icon bg-white/20">
+        <Clock size={24} className="animate-pulse" />
+      </div>
+      <div className="dash-banner-copy" style={{ flex: 1 }}>
+        <p className="dash-banner-kicker">⚠️ Upcoming Exam!</p>
+        <h3 className="dash-banner-title text-2xl font-black">{exam.title}</h3>
+        <p className="dash-banner-desc font-medium">{exam.meta}</p>
+      </div>
+      <button className="dash-banner-btn shadow-lg">Enter Exam →</button>
+    </div>
+  );
+}
 
 function StudentDashboard({
   data,
@@ -953,114 +1165,90 @@ function StudentDashboard({
   }));
   const upcomingRows: UpcomingExamRow[] = data.upcoming_exams.map((item) => ({ ...item, id: item.exam_id }));
 
-  // Pick the soonest upcoming as "urgent" if start_at is within 48h
   const urgentExam = upcomingRows
     .filter((r) => r.start_at && new Date(r.start_at).getTime() - Date.now() < 48 * 60 * 60 * 1000)
     .at(0);
 
   const urgentBanner = urgentExam
-    ? { title: urgentExam.title, meta: `Mulai ${formatDate(urgentExam.start_at)} · Segera persiapkan dirimu!` }
+    ? { title: urgentExam.title, meta: `Starts ${formatDate(urgentExam.start_at)} · Prepare yourself!` }
     : null;
 
   return (
     <>
-      {/* Hero */}
       <DashboardHero>
         <DashboardGreeting
-          title="Halo, Selamat Datang! 🎓"
-          sub="XII IPA 1 · Platform Ujian Digital"
-          badge={`Peringkat #3 di kelas`}
+          title="Hello, Welcome! 🎓"
+          sub="Digital Assessment Platform"
           actions={[
-            { label: "Sertifikat", variant: "ghost", onClick: onOpenCertificates },
-            { label: "Ujian Saya →", onClick: onOpenExams },
+            { label: "Certificates", variant: "ghost", onClick: onOpenCertificates },
+            { label: "My Exams →", onClick: onOpenExams },
           ]}
         />
       </DashboardHero>
 
-      {/* Urgent Exam Banner */}
       <UrgentExamBanner exam={urgentBanner} />
 
-      {/* KPI Stats */}
       <section className="metric-grid">
         <StatCard
           label="In Progress"
           value={data.in_progress_count}
-          caption="Submission yang bisa dilanjutkan."
+          caption="Exams you can resume."
           icon={<CalendarClock size={20} />}
           accent="warning"
-          trend={0}
+          className="stat-card-hoverable"
         />
         <StatCard
           label="Finished"
           value={data.finished_count}
-          caption="Ujian telah selesai & ternilai."
+          caption="Completed assessments."
           icon={<Trophy size={20} />}
           accent="success"
-          trend={2}
-          sparkData={[12, 13, 14, 14, 15, 16, 17, data.finished_count]}
+          className="stat-card-hoverable"
         />
         <StatCard
           label="Avg Score"
           value={data.avg_score.toFixed(1)}
-          caption="Rata-rata nilai dari attempt selesai."
+          caption="Average from finished attempts."
           icon={<ArrowUpRight size={20} />}
           accent="primary"
-          trend={7}
-          sparkData={[78, 80, 82, 82, 84, 85, 87, data.avg_score]}
+          className="stat-card-hoverable"
         />
         <StatCard
           label="Upcoming"
           value={upcomingRows.length}
-          caption="Ujian mendatang yang terjadwal."
+          caption="Scheduled future exams."
           icon={<BookOpen size={20} />}
           accent="info"
-          trend={0}
+          className="stat-card-hoverable"
         />
       </section>
 
-      {/* Primary Grid: Upcoming + Recent */}
       <section className="dashboard-grid">
         <CompactListCard
           eyebrow="Primary View"
           title="Upcoming Exams"
-          description="Ujian mendatang yang sudah dijadwalkan untukmu."
-          emptyLabel="Belum ada ujian mendatang."
+          description="Exams that have been scheduled for you."
+          emptyLabel="No upcoming exams."
           items={upcomingRows.map((item) => ({
             id: item.id,
             title: item.title,
             meta: formatDate(item.start_at),
-            trailing: item.end_at ? `Tutup ${formatDate(item.end_at)}` : "Window belum lengkap",
+            trailing: item.end_at ? `Closes ${formatDate(item.end_at)}` : "Open window",
           }))}
         />
         <CompactListCard
           eyebrow="Primary View"
           title="Recent Results"
-          description="Hasil terbaru dari ujian yang sudah kamu selesaikan."
-          emptyLabel="Belum ada hasil ujian."
+          description="Latest scores from your completed exams."
+          emptyLabel="No recent results."
           items={recentRows.map((item) => ({
             id: item.id,
             title: item.exam_title,
-            meta: item.finished_at ? `Selesai ${formatDateTime(item.finished_at)}` : "Belum selesai",
+            meta: item.finished_at ? `Finished ${formatDateTime(item.finished_at)}` : "Not finished",
             status: <StatusBadge value={item.status} />,
             trailing: `${item.score.toFixed(2)}`,
           }))}
         />
-      </section>
-
-      {/* Secondary Grid: Table + Leaderboard */}
-      <section className="dashboard-grid">
-        <DataTable
-          title="Hasil Detail"
-          rows={recentRows}
-          columns={[
-            { key: "exam_title", header: "Exam", render: (row) => row.exam_title },
-            { key: "status", header: "Status", render: (row) => <StatusBadge value={row.status} /> },
-            { key: "score", header: "Score", render: (row) => row.score.toFixed(2) },
-            { key: "finished_at", header: "Selesai", render: (row) => formatDateTime(row.finished_at) },
-          ]}
-          emptyLabel="Belum ada hasil ujian."
-        />
-        <LeaderboardCard />
       </section>
     </>
   );
@@ -1079,14 +1267,6 @@ export function DashboardPanel() {
     queryFn: () => analyticsApi.summary(),
     enabled: !!user && user.role !== "super_admin",
     refetchInterval: 30_000,
-  });
-
-  const statsQuery = useQuery({
-    queryKey: ["dashboard-stats-dashboard", user?.role],
-    queryFn: () => analyticsApi.stats(),
-    enabled: user?.role === "admin",
-    staleTime: 60_000,
-    refetchInterval: 60_000,
   });
 
   const tenantsQuery = useQuery({
@@ -1112,7 +1292,7 @@ export function DashboardPanel() {
         message={errorMessageForCode(
           (errorQuery.error as any)?.response?.data?.error,
           {},
-          "Terjadi kesalahan saat memuat dashboard. Silakan coba lagi.",
+          "An error occurred while loading the dashboard. Please try again.",
         )}
       />
     );
@@ -1123,12 +1303,12 @@ export function DashboardPanel() {
     <section className="panel-grid dashboard-shell" data-tour="dashboard">
       <CorePageTour
         page="dashboard"
-        title="Mulai dari Dashboard"
-        description="Dashboard merangkum performa tenant aktif dan membantu validasi cepat setelah publish ujian."
+        title="Start from the Dashboard"
+        description="The dashboard summarizes active tenant performance and helps validate operations."
         bullets={[
-          "Pantau metrik utama dan trend 7 hari tanpa pindah halaman.",
-          "Gunakan struktur yang sama untuk seluruh role supaya navigasi tetap familiar.",
-          "Dashboard ini adalah langkah pertama pada tour beta Sprint 12.",
+          "Monitor key metrics and 7-day trends without navigating away.",
+          "Consistent structure across all roles ensures familiar navigation.",
+          "This is the first step in the beta tour.",
         ]}
       />
 
@@ -1150,13 +1330,6 @@ export function DashboardPanel() {
       ) : summaryQuery.data?.role === "admin" || summaryQuery.data?.role === "guru" ? (
         <AdminGuruDashboard
           data={summaryQuery.data}
-          stats={statsQuery.data}
-          onOpenPrimary={() =>
-            navigate({ to: summaryQuery.data?.role === "admin" ? "/app/reports" : "/app/exams" })
-          }
-          onOpenSecondary={() =>
-            navigate({ to: summaryQuery.data?.role === "admin" ? "/app/users" : "/app/question-bank" })
-          }
           onNavigateAI={() => navigate({ to: "/app/exams" })}
         />
       ) : null}

@@ -48,10 +48,27 @@ async fn main() -> anyhow::Result<()> {
     let ws = WsState::new();
     let global_rate_limits = GlobalRateLimitProfile::from_config(&config);
 
+    // Setup S3 Client
+    let s3_creds = aws_credential_types::Credentials::new(
+        config.storage.access_key.clone(),
+        config.storage.secret_key.clone(),
+        None,
+        None,
+        "xamina-static",
+    );
+    let s3_config = aws_config::SdkConfig::builder()
+        .behavior_version(aws_config::BehaviorVersion::latest())
+        .credentials_provider(aws_credential_types::provider::SharedCredentialsProvider::new(s3_creds))
+        .endpoint_url(config.storage.endpoint.clone())
+        .region(aws_config::Region::new(std::borrow::Cow::Owned(config.storage.region.clone())))
+        .build();
+    let s3_client = aws_sdk_s3::Client::new(&s3_config);
+
     let state = Arc::new(AppState {
         services,
         pool,
         redis,
+        s3_client,
         started_at: chrono::Utc::now(),
         jwt_secret: config.jwt_secret,
         access_ttl_minutes: config.access_ttl_minutes,
@@ -62,6 +79,7 @@ async fn main() -> anyhow::Result<()> {
         import_max_bytes: config.import_max_bytes,
         import_max_rows: config.import_max_rows,
         billing: config.billing.clone(),
+        storage: config.storage.clone(),
     });
 
     spawn_redis_subscriber(state.redis.clone(), state.ws.clone());

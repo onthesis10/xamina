@@ -11,6 +11,16 @@ pub struct BillingConfig {
 }
 
 #[derive(Debug, Clone)]
+pub struct StorageConfig {
+    pub endpoint: String,
+    pub access_key: String,
+    pub secret_key: String,
+    pub region: String,
+    pub bucket: String,
+    pub public_url: String,
+}
+
+#[derive(Debug, Clone)]
 pub struct Config {
     pub database_url: String,
     pub redis_url: String,
@@ -25,6 +35,7 @@ pub struct Config {
     pub import_max_bytes: usize,
     pub import_max_rows: usize,
     pub billing: BillingConfig,
+    pub storage: StorageConfig,
 }
 
 impl Config {
@@ -70,6 +81,14 @@ impl Config {
                     .unwrap_or_else(|_| "http://localhost:8080/uploads/invoices".to_string()),
                 dunning_interval_secs: read_u64_env("BILLING_DUNNING_INTERVAL_SECS", 30),
                 dunning_max_attempts: read_i32_env("BILLING_DUNNING_MAX_ATTEMPTS", 3),
+            },
+            storage: StorageConfig {
+                endpoint: std::env::var("S3_ENDPOINT").unwrap_or_else(|_| "http://localhost:9000".to_string()),
+                access_key: std::env::var("S3_ACCESS_KEY").unwrap_or_else(|_| "minioadmin".to_string()),
+                secret_key: std::env::var("S3_SECRET_KEY").unwrap_or_else(|_| "minioadmin".to_string()),
+                region: std::env::var("S3_REGION").unwrap_or_else(|_| "us-east-1".to_string()),
+                bucket: std::env::var("S3_BUCKET").unwrap_or_else(|_| "xamina".to_string()),
+                public_url: std::env::var("S3_PUBLIC_URL").unwrap_or_else(|_| "http://localhost:9000/xamina".to_string()),
             },
         }
     }

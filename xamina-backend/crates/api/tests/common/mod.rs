@@ -5,7 +5,7 @@ use std::{
 
 use api::{
     app::{create_router, AppState},
-    config::BillingConfig,
+    config::{BillingConfig, StorageConfig},
     middleware::auth::Claims,
     middleware::rate_limit::GlobalRateLimitProfile,
     services::AppServices,
@@ -147,6 +147,30 @@ pub async fn setup_test_ctx() -> anyhow::Result<Option<TestCtx>> {
             dunning_interval_secs: 30,
             dunning_max_attempts: 3,
         },
+        storage: StorageConfig {
+            endpoint: "http://localhost:9000".to_string(),
+            access_key: "minioadmin".to_string(),
+            secret_key: "minioadmin".to_string(),
+            region: "us-east-1".to_string(),
+            bucket: "xamina".to_string(),
+            public_url: "http://localhost:9000/xamina".to_string(),
+        },
+        s3_client: {
+            let s3_creds = aws_credential_types::Credentials::new(
+                "minioadmin",
+                "minioadmin",
+                None,
+                None,
+                "xamina-test",
+            );
+            let s3_config = aws_config::SdkConfig::builder()
+                .behavior_version(aws_config::BehaviorVersion::latest())
+                .credentials_provider(aws_credential_types::provider::SharedCredentialsProvider::new(s3_creds))
+                .endpoint_url("http://localhost:9000")
+                .region(aws_config::Region::new("us-east-1"))
+                .build();
+            aws_sdk_s3::Client::new(&s3_config)
+        },
     });
 
     Ok(Some(TestCtx {
@@ -240,6 +264,21 @@ async fn run_migrations(pool: &PgPool) -> anyhow::Result<()> {
     .await?;
     sqlx::raw_sql(include_str!(
         "../../../db/migrations/0017_sprint15_auth_security.sql"
+    ))
+    .execute(pool)
+    .await?;
+    sqlx::raw_sql(include_str!(
+        "../../../db/migrations/0018_question_bank_refactor.sql"
+    ))
+    .execute(pool)
+    .await?;
+    sqlx::raw_sql(include_str!(
+        "../../../db/migrations/0019_production_erd_upgrade.sql"
+    ))
+    .execute(pool)
+    .await?;
+    sqlx::raw_sql(include_str!(
+        "../../../db/migrations/0020_add_tenant_id_to_student_profiles.sql"
     ))
     .execute(pool)
     .await?;

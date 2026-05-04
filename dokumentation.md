@@ -1,0 +1,1 @@
+run sql jika ada yg baru: docker exec -i xamina-postgres-1 psql -U postgres -d xamina < file.sql.

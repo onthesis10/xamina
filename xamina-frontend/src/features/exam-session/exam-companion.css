@@ -1,0 +1,177 @@
+/* Exam Companion Variables */
+:root {
+  --companion-bg-transition: background-color 1s ease-in-out;
+}
+
+/* Background Layers */
+.companion-bg-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 0;
+  opacity: 0;
+  transition: opacity 1s ease-in-out;
+}
+
+.companion-bg-layer.active {
+  opacity: 1;
+}
+
+/* --- Dark Mode (Midnight Study) --- */
+.companion-theme-dark .companion-bg-layer.dark-layer { opacity: 1; }
+.star {
+  position: absolute;
+  background-color: white;
+  border-radius: 50%;
+  animation: twinkle var(--duration, 3s) infinite ease-in-out alternate;
+}
+@keyframes twinkle {
+  0% { opacity: 0.1; transform: scale(0.8); }
+  100% { opacity: 0.8; transform: scale(1.2); }
+}
+
+/* --- Light Mode (Morning Fresh) --- */
+.companion-theme-light .companion-bg-layer.light-layer { opacity: 1; }
+.cloud {
+  position: absolute;
+  background: white;
+  border-radius: 50px;
+  animation: float-cloud var(--duration, 30s) linear infinite;
+  opacity: 0.6;
+}
+.cloud::before, .cloud::after {
+  content: "";
+  position: absolute;
+  background: white;
+  border-radius: 50%;
+}
+.cloud::before {
+  width: 50px; height: 50px;
+  top: -20px; left: 10px;
+}
+.cloud::after {
+  width: 70px; height: 70px;
+  top: -30px; right: 15px;
+}
+@keyframes float-cloud {
+  from { transform: translateX(100vw); }
+  to { transform: translateX(-200px); }
+}
+
+/* --- Happy Mode (Party Brain) --- */
+.companion-theme-happy .companion-bg-layer.happy-layer { opacity: 1; }
+.confetti {
+  position: absolute;
+  top: -20px;
+  animation: fall-confetti var(--duration, 4s) linear infinite;
+  border-radius: 2px;
+}
+@keyframes fall-confetti {
+  0% { transform: translateY(-5vh) rotate(0deg) rotateX(0deg); }
+  100% { transform: translateY(110vh) rotate(720deg) rotateX(360deg); }
+}
+
+/* --- Character Animations --- */
+.companion-character {
+  transition: transform 0.3s ease;
+  transform-origin: center bottom;
+}
+
+/* Normal / Default Idle */
+.mood-normal .eye-group {
+  animation: blink 4s infinite;
+}
+
+/* Sleepy */
+.mood-sleepy {
+  animation: sleepy-breathe 3s infinite ease-in-out;
+}
+.mood-sleepy .eye-closed {
+  opacity: 1;
+}
+.mood-sleepy .eye-open {
+  opacity: 0;
+}
+.mood-sleepy .zzzs {
+  animation: float-z 2s infinite ease-in;
+  opacity: 1;
+}
+
+/* Panic */
+.mood-panic {
+  animation: panic-shake 0.3s infinite;
+}
+.mood-panic .eye-group {
+  transform: scale(1.2);
+}
+.mood-panic .sweat {
+  opacity: 1;
+  animation: drip 1s infinite;
+}
+
+/* Happy */
+.mood-happy {
+  animation: happy-bounce-squash 0.6s cubic-bezier(0.28, 0.84, 0.42, 1) infinite alternate;
+  transform-origin: bottom center;
+}
+.mood-happy .mouth-smile {
+  transform: scale(1.3) translateY(-3px);
+}
+.mood-happy .eye-group {
+  animation: blink 2s infinite;
+}
+.mood-happy .limb-left {
+  animation: wave-left 0.4s ease-in-out infinite alternate;
+  transform-origin: right top;
+}
+.mood-happy .limb-right {
+  animation: wave-right 0.4s ease-in-out infinite alternate;
+  transform-origin: left top;
+}
+.mood-happy .party-hat {
+  animation: hat-wobble 0.6s ease-in-out infinite alternate;
+  transform-origin: bottom center;
+}
+
+/* Character Keyframes */
+@keyframes blink {
+  0%, 96%, 100% { transform: scaleY(1); }
+  98% { transform: scaleY(0.1); }
+}
+@keyframes sleepy-breathe {
+  0%, 100% { transform: scaleY(1) translateY(0); }
+  50% { transform: scaleY(0.95) translateY(5px); }
+}
+@keyframes float-z {
+  0% { transform: translate(0, 0) scale(0.5); opacity: 0; }
+  50% { opacity: 1; }
+  100% { transform: translate(20px, -40px) scale(1.5); opacity: 0; }
+}
+@keyframes panic-shake {
+  0%, 100% { transform: translate(0, 0); }
+  25% { transform: translate(-3px, 1px) rotate(-2deg); }
+  50% { transform: translate(2px, -2px) rotate(2deg); }
+  75% { transform: translate(-1px, 2px) rotate(-1deg); }
+}
+@keyframes drip {
+  from { transform: translateY(0); opacity: 1; }
+  to { transform: translateY(15px); opacity: 0; }
+}
+@keyframes happy-bounce-squash {
+  0% { transform: translateY(0) scale(1.1, 0.9); }
+  40% { transform: translateY(-10px) scale(0.95, 1.05); }
+  100% { transform: translateY(-25px) scale(1, 1); }
+}
+@keyframes wave-left {
+  from { transform: rotate(-10deg); }
+  to { transform: rotate(40deg); }
+}
+@keyframes wave-right {
+  from { transform: rotate(10deg); }
+  to { transform: rotate(-40deg); }
+}
+@keyframes hat-wobble {
+  from { transform: rotate(-15deg); }
+  to { transform: rotate(15deg); }
+}

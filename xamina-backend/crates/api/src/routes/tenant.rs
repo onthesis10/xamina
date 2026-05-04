@@ -16,6 +16,7 @@ use crate::{
 
 pub fn routes() -> Router<SharedState> {
     Router::new()
+        .route("/me", patch(update_my_tenant))
         .route("/classes", get(list_classes).post(create_class))
         .route("/classes/:id", patch(update_class).delete(delete_class))
 }
@@ -54,6 +55,48 @@ fn ensure_admin(auth: &AuthUser) -> Result<(), ApiError> {
         ));
     }
     Ok(())
+}
+
+#[derive(Debug, Deserialize)]
+struct UpdateMyTenantRequest {
+    name: Option<String>,
+}
+
+async fn update_my_tenant(
+    State(state): State<SharedState>,
+    auth: AuthUser,
+    Json(body): Json<UpdateMyTenantRequest>,
+) -> ApiResult<SuccessResponse<serde_json::Value>> {
+    ensure_admin(&auth)?;
+
+    if let Some(name) = body.name {
+        let name = name.trim();
+        if name.is_empty() {
+            return Err(ApiError::new(
+                StatusCode::BAD_REQUEST,
+                "VALIDATION_ERROR",
+                "Tenant name cannot be empty",
+            ));
+        }
+
+        sqlx::query("UPDATE tenants SET name = $1, updated_at = NOW() WHERE id = $2")
+            .bind(name)
+            .bind(auth.0.tenant_id)
+            .execute(&state.pool)
+            .await
+            .map_err(|_| {
+                ApiError::new(
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    "DB_ERROR",
+                    "Failed to update tenant name",
+                )
+            })?;
+    }
+
+    Ok(Json(SuccessResponse {
+        success: true,
+        data: json!({ "id": auth.0.tenant_id }),
+    }))
 }
 
 async fn list_classes(

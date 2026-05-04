@@ -4,13 +4,13 @@ use uuid::Uuid;
 use crate::error::CoreError;
 
 use super::dto::{
-    ClassResultRow, StudentRecentResult, StudentUpcomingExam, TenantQuotaStatsDto, TrendPoint,
+    ClassResultRow, StudentRecentResult, StudentUpcomingExam, TenantQuotaStatsDto, TopScorerDto, TrendPoint,
 };
 use super::models::{ExamInsightAnswerRow, ExamInsightExamRow, ExamInsightSubmissionRow};
 
 #[derive(Debug, Clone)]
 pub struct AnalyticsRepository {
-    pool: PgPool,
+    pub pool: PgPool,
 }
 
 impl AnalyticsRepository {
@@ -82,7 +82,11 @@ impl AnalyticsRepository {
         guru_id: Uuid,
     ) -> Result<(i64, i64, i64, f64, f64), CoreError> {
         let exams_total = sqlx::query_scalar::<_, i64>(
-            "SELECT COUNT(*) FROM exams WHERE tenant_id = $1 AND created_by = $2",
+            "SELECT COUNT(*) FROM exams e 
+             WHERE e.tenant_id = $1 
+               AND (e.created_by = $2 
+                    OR EXISTS (SELECT 1 FROM teacher_assignments ta 
+                               WHERE ta.teacher_id = $2 AND ta.subject_id = e.subject_id AND ta.class_id = e.class_id))",
         )
         .bind(tenant_id)
         .bind(guru_id)
@@ -91,7 +95,12 @@ impl AnalyticsRepository {
         .map_err(|_| CoreError::internal("DB_ERROR", "Failed to count exams"))?;
 
         let published_exams_total = sqlx::query_scalar::<_, i64>(
-            "SELECT COUNT(*) FROM exams WHERE tenant_id = $1 AND created_by = $2 AND status = 'published'",
+            "SELECT COUNT(*) FROM exams e 
+             WHERE e.tenant_id = $1 
+               AND e.status = 'published'
+               AND (e.created_by = $2 
+                    OR EXISTS (SELECT 1 FROM teacher_assignments ta 
+                               WHERE ta.teacher_id = $2 AND ta.subject_id = e.subject_id AND ta.class_id = e.class_id))",
         )
         .bind(tenant_id)
         .bind(guru_id)
@@ -104,7 +113,9 @@ impl AnalyticsRepository {
              FROM submissions s
              JOIN exams e ON e.id = s.exam_id
              WHERE s.tenant_id = $1
-               AND e.created_by = $2",
+               AND (e.created_by = $2 
+                    OR EXISTS (SELECT 1 FROM teacher_assignments ta 
+                               WHERE ta.teacher_id = $2 AND ta.subject_id = e.subject_id AND ta.class_id = e.class_id))",
         )
         .bind(tenant_id)
         .bind(guru_id)
@@ -121,7 +132,9 @@ impl AnalyticsRepository {
              FROM submissions s
              JOIN exams e ON e.id = s.exam_id
              WHERE s.tenant_id = $1
-               AND e.created_by = $2
+               AND (e.created_by = $2 
+                    OR EXISTS (SELECT 1 FROM teacher_assignments ta 
+                               WHERE ta.teacher_id = $2 AND ta.subject_id = e.subject_id AND ta.class_id = e.class_id))
                AND s.status IN ('finished', 'auto_finished')",
         )
         .bind(tenant_id)
@@ -178,7 +191,9 @@ impl AnalyticsRepository {
              FROM submissions s
              JOIN exams e ON e.id = s.exam_id
              WHERE s.tenant_id = $1
-               AND e.created_by = $2
+               AND (e.created_by = $2 
+                    OR EXISTS (SELECT 1 FROM teacher_assignments ta 
+                               WHERE ta.teacher_id = $2 AND ta.subject_id = e.subject_id AND ta.class_id = e.class_id))
                AND s.finished_at >= NOW() - INTERVAL '7 day'
                AND s.status IN ('finished', 'auto_finished')
              GROUP BY DATE(s.finished_at)
@@ -303,7 +318,9 @@ impl AnalyticsRepository {
                 WHERE s.tenant_id = $1
                   AND ($2::uuid IS NULL OR c.id = $2)
                   AND ($3::uuid IS NULL OR e.id = $3)
-                  AND ($4::text <> 'guru' OR e.created_by = $5)
+                  AND ($4::text <> 'guru' OR e.created_by = $5 
+                       OR EXISTS (SELECT 1 FROM teacher_assignments ta 
+                                  WHERE ta.teacher_id = $5 AND ta.subject_id = e.subject_id AND ta.class_id = e.class_id))
                 GROUP BY c.id, e.id
              ) grouped",
         )
@@ -350,7 +367,9 @@ impl AnalyticsRepository {
                AND s.status IN ('finished', 'auto_finished')
                AND ($2::uuid IS NULL OR c.id = $2)
                AND ($3::uuid IS NULL OR e.id = $3)
-               AND ($4::text <> 'guru' OR e.created_by = $5)
+               AND ($4::text <> 'guru' OR e.created_by = $5
+                    OR EXISTS (SELECT 1 FROM teacher_assignments ta 
+                               WHERE ta.teacher_id = $5 AND ta.subject_id = e.subject_id AND ta.class_id = e.class_id))
              GROUP BY c.id, c.name, c.grade, c.major, e.id, e.title
              ORDER BY MAX(s.finished_at) DESC NULLS LAST
              LIMIT $6 OFFSET $7",
@@ -405,7 +424,9 @@ impl AnalyticsRepository {
                 id AS exam_id,
                 title AS exam_title,
                 pass_score,
-                created_by
+                created_by,
+                subject_id,
+                class_id
              FROM exams
              WHERE tenant_id = $1
                AND id = $2",
@@ -466,5 +487,62 @@ impl AnalyticsRepository {
         .fetch_all(&self.pool)
         .await
         .map_err(|_| CoreError::internal("DB_ERROR", "Failed to load submission answers"))
+    }
+
+    pub async fn top_scorers_admin(
+        &self,
+        tenant_id: Uuid,
+    ) -> Result<Vec<TopScorerDto>, CoreError> {
+        sqlx::query_as::<_, TopScorerDto>(
+            "SELECT
+                u.id AS student_id,
+                u.name AS student_name,
+                e.title AS exam_title,
+                COALESCE(s.score, 0)::float8 AS score,
+                s.finished_at
+             FROM submissions s
+             JOIN users u ON u.id = s.student_id
+             JOIN exams e ON e.id = s.exam_id
+             WHERE s.tenant_id = $1
+               AND s.status IN ('finished', 'auto_finished')
+               AND s.score IS NOT NULL
+             ORDER BY s.score DESC, s.finished_at DESC NULLS LAST
+             LIMIT 3",
+        )
+        .bind(tenant_id)
+        .fetch_all(&self.pool)
+        .await
+        .map_err(|_| CoreError::internal("DB_ERROR", "Failed to load top scorers"))
+    }
+
+    pub async fn top_scorers_guru(
+        &self,
+        tenant_id: Uuid,
+        guru_id: Uuid,
+    ) -> Result<Vec<TopScorerDto>, CoreError> {
+        sqlx::query_as::<_, TopScorerDto>(
+            "SELECT
+                u.id AS student_id,
+                u.name AS student_name,
+                e.title AS exam_title,
+                COALESCE(s.score, 0)::float8 AS score,
+                s.finished_at
+             FROM submissions s
+             JOIN users u ON u.id = s.student_id
+             JOIN exams e ON e.id = s.exam_id
+             WHERE s.tenant_id = $1
+               AND s.status IN ('finished', 'auto_finished')
+               AND s.score IS NOT NULL
+               AND (e.created_by = $2
+                    OR EXISTS (SELECT 1 FROM teacher_assignments ta
+                               WHERE ta.teacher_id = $2 AND ta.subject_id = e.subject_id AND ta.class_id = e.class_id))
+             ORDER BY s.score DESC, s.finished_at DESC NULLS LAST
+             LIMIT 3",
+        )
+        .bind(tenant_id)
+        .bind(guru_id)
+        .fetch_all(&self.pool)
+        .await
+        .map_err(|_| CoreError::internal("DB_ERROR", "Failed to load top scorers for guru"))
     }
 }

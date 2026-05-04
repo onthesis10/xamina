@@ -9,8 +9,8 @@ use crate::error::CoreError;
 
 use super::{
     dto::{
-        CreateUserPayload, CsvImportError, CsvImportResult, ListUsersQuery, PageMeta,
-        UpdateUserPayload, UserDto,
+        CreateUserPayload, CsvImportError, CsvImportResult, GenerateBulkUsersPayload,
+        GenerateBulkUsersResult, ListUsersQuery, PageMeta, UpdateUserPayload, UserDto,
     },
     models::ListUsersResult,
     repository::UserRepository,
@@ -74,12 +74,11 @@ impl UserService {
         body: CreateUserPayload,
     ) -> Result<UserDto, CoreError> {
         Self::validate_role(&body.role)?;
+        if body.password.trim().is_empty() {
+            return Err(CoreError::bad_request("INVALID_PASSWORD", "Password wajib diisi"));
+        }
         self.ensure_user_quota(tenant_id, 1).await?;
-        let password = body
-            .password
-            .clone()
-            .unwrap_or_else(|| "Password123!".to_string());
-        let password_hash = Self::hash_password(&password)?;
+        let password_hash = Self::hash_password(&body.password)?;
         self.repo
             .create_user(tenant_id, &body, &password_hash)
             .await
@@ -244,6 +243,39 @@ impl UserService {
             ));
         }
         Ok(())
+    }
+
+    pub async fn generate_bulk_users(
+        &self,
+        tenant_id: Uuid,
+        payload: GenerateBulkUsersPayload,
+    ) -> Result<GenerateBulkUsersResult, CoreError> {
+        Self::validate_role(&payload.role)?;
+        if payload.password.trim().is_empty() {
+            return Err(CoreError::bad_request("INVALID_PASSWORD", "Password wajib diisi"));
+        }
+        self.ensure_user_quota(tenant_id, payload.count as i64).await?;
+
+        let password_hash = Self::hash_password(&payload.password)?;
+
+        let _users = self.repo.generate_bulk_users(
+            tenant_id,
+            payload.count,
+            &payload.role,
+            &payload.name_prefix,
+            payload.class_id,
+            payload.academic_year.as_deref(),
+            &password_hash,
+        ).await?;
+
+        // In a real system you'd generate the CSV string of users here
+        // and upload it to a storage bucket to return a csv_url.
+        // For now, we mock the CSV url as requested, but the users are inserted.
+
+        Ok(GenerateBulkUsersResult {
+            generated_count: payload.count,
+            csv_url: "https://example.com/generated_users.csv".to_string(),
+        })
     }
 
     fn validate_role(role: &str) -> Result<(), CoreError> {

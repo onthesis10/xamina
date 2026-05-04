@@ -8,6 +8,24 @@ import { router } from "./router";
 import { useUiStore, type BeforeInstallPromptEvent } from "./store/ui.store";
 import "./index.css";
 
+// Inject Analytics Script if available
+if (import.meta.env.VITE_PUBLIC_ANALYTICS_ID) {
+    const script = document.createElement("script");
+    script.src = `https://www.googletagmanager.com/gtag/js?id=${import.meta.env.VITE_PUBLIC_ANALYTICS_ID}`;
+    script.async = true;
+    document.head.appendChild(script);
+
+    const inlineScript = document.createElement("script");
+    inlineScript.innerHTML = `
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', '${import.meta.env.VITE_PUBLIC_ANALYTICS_ID}');
+    `;
+    document.head.appendChild(inlineScript);
+}
+
+
 ReactDOM.createRoot(document.getElementById("root")!).render(
     <React.StrictMode>
         <QueryClientProvider client={queryClient}>

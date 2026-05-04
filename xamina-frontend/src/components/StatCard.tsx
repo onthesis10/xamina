@@ -1,15 +1,18 @@
 import type { ReactNode } from "react";
+import { motion } from "framer-motion";
+import { TrendingUp, TrendingDown } from "lucide-react";
 
 interface StatCardProps {
   label: string;
   value: string | number;
   caption?: string;
   icon?: ReactNode;
-  accent?: "primary" | "success" | "warning" | "info" | "violet" | "teal";
+  accent?: "primary" | "success" | "warning" | "info" | "violet" | "teal" | "danger";
   progress?: number;
   trend?: number; // positive = up (good), negative = down
-  sparkData?: number[]; // 8 data points for mini sparkline
+  sparkData?: number[]; // points for mini sparkline
   className?: string;
+  delay?: number;
 }
 
 const ACCENT_STYLES: Record<NonNullable<StatCardProps["accent"]>, { bg: string; fg: string }> = {
@@ -19,44 +22,42 @@ const ACCENT_STYLES: Record<NonNullable<StatCardProps["accent"]>, { bg: string; 
   info: { bg: "var(--info-bg)", fg: "var(--info)" },
   violet: { bg: "var(--violet-bg)", fg: "var(--violet)" },
   teal: { bg: "var(--teal-bg)", fg: "var(--teal)" },
+  danger: { bg: "var(--danger-bg)", fg: "var(--danger)" },
 };
 
 function Sparkline({ data, color }: { data: number[]; color: string }) {
-  const width = 72;
-  const height = 28;
+  const W = 80;
+  const H = 32;
   const max = Math.max(...data);
   const min = Math.min(...data);
   const range = max - min || 1;
   const pts = data
-    .map((v, i) => `${(i / (data.length - 1)) * width},${height - ((v - min) / range) * height}`)
+    .map((v, i) => `${(i / (data.length - 1)) * W},${H - ((v - min) / range) * H}`)
     .join(" ");
-
-  // Area fill
-  const firstX = 0;
-  const lastX = width;
-  const areaPath = `M${firstX},${height} L${data
-    .map((v, i) => `${(i / (data.length - 1)) * width},${height - ((v - min) / range) * height}`)
-    .join(" L")} L${lastX},${height} Z`;
+  const gradId = `sp-${color.replace(/[^a-z0-9]/gi, "")}-${Math.random().toString(36).slice(2, 5)}`;
+  const areaPath = `M0,${H} L${data
+    .map((v, i) => `${(i / (data.length - 1)) * W},${H - ((v - min) / range) * H}`)
+    .join(" L")} L${W},${H} Z`;
 
   return (
-    <svg
-      className="stat-sparkline"
-      width={width}
-      height={height}
-      viewBox={`0 0 ${width} ${height}`}
-      aria-hidden="true"
-    >
+    <svg className="stat-sparkline" width={W} height={H} viewBox={`0 0 ${W} ${H}`} aria-hidden="true" style={{ overflow: "visible" }}>
       <defs>
-        <linearGradient id={`spark-fill-${color.replace(/[^a-z0-9]/gi, "")}`} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor={color} stopOpacity="0.22" />
+        <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={color} stopOpacity="0.35" />
           <stop offset="100%" stopColor={color} stopOpacity="0" />
         </linearGradient>
       </defs>
-      <path
+      <motion.path
+        initial={{ pathLength: 0, opacity: 0 }}
+        animate={{ pathLength: 1, opacity: 1 }}
+        transition={{ duration: 1.2, ease: "easeInOut" }}
         d={areaPath}
-        fill={`url(#spark-fill-${color.replace(/[^a-z0-9]/gi, "")})`}
+        fill={`url(#${gradId})`}
       />
-      <polyline
+      <motion.polyline
+        initial={{ pathLength: 0 }}
+        animate={{ pathLength: 1 }}
+        transition={{ duration: 1, ease: "easeInOut" }}
         fill="none"
         stroke={color}
         strokeWidth="2"
@@ -64,27 +65,6 @@ function Sparkline({ data, color }: { data: number[]; color: string }) {
         strokeLinejoin="round"
         points={pts}
       />
-      {/* Last point dot */}
-      {data.length > 0 && (
-        <circle
-          cx={(data.length - 1) / (data.length - 1) * width}
-          cy={height - ((data[data.length - 1] - min) / range) * height}
-          r="2.5"
-          fill={color}
-        />
-      )}
-    </svg>
-  );
-}
-
-function TrendArrow({ up }: { up: boolean }) {
-  return up ? (
-    <svg width="9" height="9" viewBox="0 0 9 9" fill="none" aria-hidden="true">
-      <polyline points="1,7 4.5,2 8,7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  ) : (
-    <svg width="9" height="9" viewBox="0 0 9 9" fill="none" aria-hidden="true">
-      <polyline points="1,2 4.5,7 8,2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
@@ -99,48 +79,59 @@ export function StatCard({
   trend,
   sparkData,
   className,
+  delay = 0,
 }: StatCardProps) {
-  const accentStyle = ACCENT_STYLES[accent];
+  const { bg, fg } = ACCENT_STYLES[accent];
   const hasTrend = typeof trend === "number";
   const isUp = hasTrend && trend >= 0;
-  const sparkColor = accentStyle.fg;
 
   return (
-    <section className={`card stat-card stat-card-hoverable${className ? ` ${className}` : ""}`}>
+    <motion.section
+      className={`card stat-card ${className ?? ""}`}
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay, duration: 0.45, ease: "easeOut" }}
+    >
       <div className="stat-card-head">
-        <div>
-          <p className="stat-label">{label}</p>
-          <h3 className="metric-value">{value}</h3>
+        {/* Icon */}
+        <div className="stat-icon" style={{ background: bg, color: fg }}>
+          {icon}
         </div>
-        {icon ? (
-          <div className="stat-icon" style={{ background: accentStyle.bg, color: accentStyle.fg }}>
-            {icon}
-          </div>
-        ) : null}
+
+        {/* Trend badge */}
+        {hasTrend && (
+          <span className={`stat-trend ${isUp ? "up" : "down"}`}>
+            {isUp ? <TrendingUp size={11} /> : <TrendingDown size={11} />}
+            {Math.abs(trend)}%
+          </span>
+        )}
       </div>
 
-      {caption ? <p className="stat-trend">{caption}</p> : null}
+      {/* Value */}
+      <div>
+        <p className="stat-label">{label}</p>
+        <p className="stat-value-lg" style={{ color: "var(--text-0)" }}>{value}</p>
+        {caption && <p className="stat-trend" style={{ marginTop: 3, fontSize: 11, fontWeight: 500, color: "var(--text-2)", padding: 0, background: "none" }}>{caption}</p>}
+      </div>
 
-      {/* Trend + Sparkline row */}
-      {(hasTrend || sparkData) && (
-        <div className="stat-trend-block">
-          {hasTrend && (
-            <span className={`stat-trend-badge ${isUp ? "up" : "down"}`}>
-              <TrendArrow up={isUp} />
-              {Math.abs(trend)}%
-            </span>
-          )}
-          {sparkData && sparkData.length > 1 && (
-            <Sparkline data={sparkData} color={sparkColor} />
-          )}
-        </div>
+      {/* Sparkline */}
+      {sparkData && sparkData.length > 1 && (
+        <Sparkline data={sparkData} color={fg} />
       )}
 
-      {typeof progress === "number" ? (
-        <div className="progress-bar stat-progress" aria-hidden="true">
-          <div style={{ width: `${Math.max(0, Math.min(progress, 100))}%` }} />
+      {/* Progress bar */}
+      {typeof progress === "number" && (
+        <div className="stat-progress">
+          <div className="progress-bar">
+            <motion.div
+              initial={{ width: 0 }}
+              animate={{ width: `${Math.max(0, Math.min(progress, 100))}%` }}
+              transition={{ duration: 0.8, ease: "circOut", delay: delay + 0.3 }}
+              style={{ background: fg }}
+            />
+          </div>
         </div>
-      ) : null}
-    </section>
+      )}
+    </motion.section>
   );
 }

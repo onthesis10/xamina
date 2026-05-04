@@ -59,7 +59,7 @@ impl SubmissionService {
     ) -> Result<StartSubmissionDto, CoreError> {
         let exam = sqlx::query_as::<_, ExamStartRow>(
             "SELECT id, tenant_id, title, duration_minutes, pass_score, status, shuffle_questions,
-                    shuffle_options, start_at, end_at
+                    shuffle_options, start_at, end_at, class_id
              FROM exams
              WHERE id = $1 AND tenant_id = $2",
         )
@@ -69,6 +69,31 @@ impl SubmissionService {
         .await
         .map_err(|_| CoreError::internal("DB_ERROR", "Failed to load exam"))?
         .ok_or_else(|| CoreError::not_found("NOT_FOUND", "Exam not found"))?;
+
+        if exam.class_id.is_some() {
+            let is_allowed = sqlx::query_scalar::<_, bool>(
+                "SELECT EXISTS (
+                    SELECT 1 FROM student_class_history 
+                    WHERE student_id = $1 AND class_id = $2 AND is_active = true
+                    UNION ALL
+                    SELECT 1 FROM exam_participants 
+                    WHERE student_id = $1 AND exam_id = $3
+                )",
+            )
+            .bind(student_id)
+            .bind(exam.class_id)
+            .bind(exam.id)
+            .fetch_one(&self.repo.pool)
+            .await
+            .unwrap_or(false);
+
+            if !is_allowed {
+                return Err(CoreError::forbidden(
+                    "FORBIDDEN",
+                    "Student is not assigned to the required class for this exam",
+                ));
+            }
+        }
 
         if exam.status != "published" {
             return Err(CoreError::bad_request(
@@ -249,6 +274,18 @@ impl SubmissionService {
               AND s.tenant_id = e.tenant_id
              WHERE e.tenant_id = $1
                AND e.status = 'published'
+               AND (
+                   e.class_id IS NULL
+                   OR e.class_id = (SELECT class_id FROM users WHERE id = $2 AND tenant_id = $1)
+                   OR e.class_id IN (
+                       SELECT class_id FROM student_class_history
+                       WHERE student_id = $2 AND is_active = true
+                   )
+                   OR EXISTS (
+                       SELECT 1 FROM exam_participants ep
+                       WHERE ep.exam_id = e.id AND ep.student_id = $2
+                   )
+               )
              ORDER BY e.start_at ASC NULLS LAST, e.created_at DESC",
         )
         .bind(tenant_id)

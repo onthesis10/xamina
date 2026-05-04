@@ -10,11 +10,17 @@ pub mod notification;
 pub mod platform;
 pub mod privacy;
 pub mod question;
+pub mod registration;
 pub mod report;
+pub mod student_class;
+pub mod student_profile;
+pub mod subject;
 pub mod submission;
 pub mod superadmin;
+pub mod teacher_assignment;
 pub mod tenant;
 pub mod user;
+pub mod user_generate;
 pub mod websocket;
 
 pub fn router() -> Router<crate::app::SharedState> {
@@ -34,4 +40,11 @@ pub fn router() -> Router<crate::app::SharedState> {
         .merge(notification::routes())
         .merge(platform::routes())
         .merge(ai::routes())
+        .merge(registration::routes())
+        .merge(subject::routes())
+        .merge(teacher_assignment::routes())
+        .merge(student_class::routes())
+        .merge(student_profile::routes())
+        .merge(user_generate::routes())
 }
+

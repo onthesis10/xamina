@@ -28,6 +28,7 @@ pub struct ExamStartRow {
     pub shuffle_options: bool,
     pub start_at: Option<DateTime<Utc>>,
     pub end_at: Option<DateTime<Utc>>,
+    pub class_id: Option<Uuid>,
 }
 
 #[derive(Debug, Serialize, FromRow, Clone)]

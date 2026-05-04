@@ -17,6 +17,7 @@ import type {
   UpdateUserDto,
   UserDto,
   UserListQuery,
+  GenerateBulkUsersDto,
 } from "@/types/api.types";
 
 interface UserFormState {
@@ -81,6 +82,14 @@ export function UsersPanel() {
   const [showImportModal, setShowImportModal] = useState(false);
   const [csvFile, setCsvFile] = useState<File | null>(null);
   const [importPreview, setImportPreview] = useState<CsvImportResult | null>(null);
+  const [showGenerateModal, setShowGenerateModal] = useState(false);
+  const [generateForm, setGenerateForm] = useState<GenerateBulkUsersDto>({
+    count: 10,
+    role: "siswa",
+    name_prefix: "Siswa",
+    password: "",
+  });
+  const [generatedPassword, setGeneratedPassword] = useState<string | null>(null);
 
   useEffect(() => {
     writeQueryToUrl(query);
@@ -104,12 +113,18 @@ export function UsersPanel() {
 
   const createMutation = useMutation({
     mutationFn: async () => {
+      if (!form.name.trim() || !form.email.trim()) {
+        throw new Error("Nama dan email wajib diisi.");
+      }
+      if (!form.password.trim()) {
+        throw new Error("Password wajib diisi.");
+      }
       await api.post("/users", {
         email: form.email,
         name: form.name,
         role: form.role,
         class_id: form.class_id || undefined,
-        password: form.password || undefined,
+        password: form.password,
       });
     },
     onSuccess: async () => {
@@ -118,7 +133,7 @@ export function UsersPanel() {
       toast.success("User berhasil ditambahkan.");
     },
     onError: (error) => {
-      toast.error(errorMessageForCode(error, {}, "Gagal membuat user."));
+      toast.error(error instanceof Error ? error.message : errorMessageForCode(error, {}, "Gagal membuat user."));
     },
   });
 
@@ -181,6 +196,25 @@ export function UsersPanel() {
     },
     onError: (error) => {
       toast.error(errorMessageForCode(error, {}, "Gagal import CSV file."));
+    },
+  });
+
+  const generateMutation = useMutation({
+    mutationFn: async () => {
+      if (!generateForm.password.trim()) {
+        throw new Error("Password untuk bulk generate wajib diisi.");
+      }
+      const response = await api.post<ApiSuccess<any>>("/users/generate", generateForm);
+      return response.data.data;
+    },
+    onSuccess: async (data) => {
+      setGeneratedPassword(generateForm.password);
+      setShowGenerateModal(false);
+      await qc.invalidateQueries({ queryKey: ["users"] });
+      toast.success(`${data.generated_count} user berhasil digenerate.`);
+    },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : errorMessageForCode(error, {}, "Gagal generate user."));
     },
   });
 
@@ -251,12 +285,13 @@ export function UsersPanel() {
               ))}
             </select>
           </FormField>
-          <FormField label="Password" hint="Kosongkan bila backend men-generate default password sendiri.">
-            <input className="input" type="password" placeholder="Password123!" value={form.password} onChange={(e) => setForm((v) => ({ ...v, password: e.target.value }))} />
+          <FormField label="Password *">
+            <input className="input" type="password" placeholder="Masukkan password" value={form.password} onChange={(e) => setForm((v) => ({ ...v, password: e.target.value }))} />
           </FormField>
         </div>
         <div className="page-actions">
           <button className="btn" onClick={() => createMutation.mutate()} disabled={createMutation.isPending}>Simpan User</button>
+          <button className="btn btn-ghost" onClick={() => setShowGenerateModal(true)}>Generate Masal</button>
           <button className="btn btn-ghost" onClick={() => setShowImportModal(true)}>Import CSV File</button>
           <button
             className="btn btn-ghost"
@@ -445,6 +480,67 @@ export function UsersPanel() {
             </div>
           ) : null}
         </div>
+      </ConfirmDialog>
+
+      {generatedPassword ? (
+        <div className="card" style={{ background: "var(--surface-2)", border: "1px solid var(--warning)", marginBottom: 8 }}>
+          <p className="section-eyebrow" style={{ color: "var(--warning)" }}>Password Bulk Generate Terakhir</p>
+          <p className="state-text" style={{ marginTop: 4 }}>
+            Catat dan bagikan password ini ke pengguna yang baru dibuat:
+          </p>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 6 }}>
+            <code style={{ flex: 1, padding: "6px 10px", background: "var(--surface-3)", borderRadius: 4, fontFamily: "monospace", fontSize: 14 }}>
+              {generatedPassword}
+            </code>
+            <button
+              className="btn btn-ghost"
+              onClick={() => { navigator.clipboard.writeText(generatedPassword); toast.success("Password disalin."); }}
+            >
+              Salin
+            </button>
+            <button className="btn btn-ghost" onClick={() => setGeneratedPassword(null)}>Tutup</button>
+          </div>
+        </div>
+      ) : null}
+
+      <ConfirmDialog
+        open={showGenerateModal}
+        title="Generate User Masal"
+        confirmLabel={generateMutation.isPending ? "Generating..." : "Generate"}
+        onCancel={() => { setShowGenerateModal(false); setGenerateForm({ count: 10, role: "siswa", name_prefix: "Siswa", password: "" }); }}
+        onConfirm={() => generateMutation.mutate()}
+      >
+        <div className="grid-2" style={{ marginTop: 8 }}>
+          <FormField label="Role">
+            <select className="input" value={generateForm.role} onChange={(e) => setGenerateForm({ ...generateForm, role: e.target.value as CreateUserDto["role"] })}>
+              <option value="siswa">siswa</option>
+              <option value="guru">guru</option>
+              <option value="admin">admin</option>
+            </select>
+          </FormField>
+          <FormField label="Jumlah User">
+            <input className="input" type="number" min="1" max="500" value={generateForm.count} onChange={(e) => setGenerateForm({ ...generateForm, count: parseInt(e.target.value) || 1 })} />
+          </FormField>
+          <FormField label="Prefix Nama">
+            <input className="input" value={generateForm.name_prefix} placeholder="Siswa" onChange={(e) => setGenerateForm({ ...generateForm, name_prefix: e.target.value })} />
+          </FormField>
+          <FormField label="Password * (untuk semua akun)">
+            <input className="input" type="text" placeholder="Masukkan password" value={generateForm.password} onChange={(e) => setGenerateForm({ ...generateForm, password: e.target.value })} />
+          </FormField>
+          {generateForm.role === "siswa" && (
+            <FormField label="Kelas">
+              <select className="input" value={generateForm.class_id ?? ""} onChange={(e) => setGenerateForm({ ...generateForm, class_id: e.target.value || undefined })}>
+                <option value="">Pilih Kelas</option>
+                {classOptions.map((c) => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </select>
+            </FormField>
+          )}
+        </div>
+        <p className="state-text text-sm" style={{ marginTop: 12 }}>
+          Password yang Anda masukkan akan dipakai untuk semua akun yang digenerate. Setelah berhasil, password akan ditampilkan agar bisa Anda salin dan bagikan ke pengguna.
+        </p>
       </ConfirmDialog>
     </section>
   );

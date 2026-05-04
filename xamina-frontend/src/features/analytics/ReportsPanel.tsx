@@ -17,6 +17,7 @@ import type {
     ClassResultRow,
     ItemAnalysisRowDto,
     ScoreDistributionBinDto,
+    TeacherSubjectDto,
     TimeSeriesPerformancePointDto,
 } from "@/types/api.types";
 
@@ -202,6 +203,24 @@ export function ReportsPanel() {
         queryKey: ["exams-for-report", tenantScopeKey],
         queryFn: () => examApi.list({ page: 1, page_size: 100 }),
     });
+
+    // Feature 1: Fetch teacher subjects for guru role
+    const teacherSubjectsQuery = useQuery({
+        queryKey: ["teacher-subjects-for-report", user?.id],
+        queryFn: async () => {
+            const response = await api.get<ApiSuccess<TeacherSubjectDto[]>>(`/teachers/${user!.id}/subjects`);
+            return response.data.data;
+        },
+        enabled: user?.role === "guru",
+    });
+
+    // Filter exams: guru only sees exams matching their assigned subjects
+    const filteredExamsForDropdown = useMemo(() => {
+        const allExams = examsQuery.data?.data ?? [];
+        if (user?.role !== "guru" || !teacherSubjectsQuery.data) return allExams;
+        const allowedSubjectIds = new Set(teacherSubjectsQuery.data.map(s => s.subject_id));
+        return allExams.filter(e => e.subject_id && allowedSubjectIds.has(e.subject_id));
+    }, [examsQuery.data, user?.role, teacherSubjectsQuery.data]);
 
     const reportQuery = useQuery({
         queryKey: ["class-results-report", tenantScopeKey, query],
@@ -452,7 +471,7 @@ export function ReportsPanel() {
                         }
                     >
                         <option value="">Pilih exam (wajib untuk insights)</option>
-                        {(examsQuery.data?.data ?? []).map((item) => (
+                        {filteredExamsForDropdown.map((item) => (
                             <option key={item.id} value={item.id}>
                                 {item.title}
                             </option>

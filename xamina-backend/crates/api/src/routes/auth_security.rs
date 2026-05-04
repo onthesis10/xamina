@@ -86,6 +86,7 @@ pub struct UserSecuritySettingsRow {
 pub struct SecurityUserRow {
     pub id: Uuid,
     pub tenant_id: Uuid,
+    pub tenant_name: String,
     pub email: String,
     pub password_hash: String,
     pub name: String,
@@ -274,9 +275,10 @@ pub async fn load_security_user(
     user_id: Uuid,
 ) -> Result<SecurityUserRow, ApiError> {
     sqlx::query_as::<_, SecurityUserRow>(
-        "SELECT id, tenant_id, email, password_hash, name, role, class_id, is_active
-         FROM users
-         WHERE tenant_id = $1 AND id = $2",
+        "SELECT u.id, u.tenant_id, t.name AS tenant_name, u.email, u.password_hash, u.name, u.role, u.class_id
+         FROM users u
+         JOIN tenants t ON t.id = u.tenant_id
+         WHERE u.tenant_id = $1 AND u.id = $2",
     )
     .bind(tenant_id)
     .bind(user_id)
@@ -713,6 +715,7 @@ pub async fn issue_session(
         user: AuthUserDto {
             id: user.id,
             tenant_id: user.tenant_id,
+            tenant_name: user.tenant_name.clone(),
             email: user.email.clone(),
             name: user.name.clone(),
             role: user.role.clone(),

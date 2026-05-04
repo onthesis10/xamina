@@ -11,6 +11,15 @@ pub struct TrendPoint {
     pub pass_rate: f64,
 }
 
+#[derive(Debug, Clone, Serialize, FromRow)]
+pub struct TopScorerDto {
+    pub student_id: Uuid,
+    pub student_name: String,
+    pub exam_title: String,
+    pub score: f64,
+    pub finished_at: Option<DateTime<Utc>>,
+}
+
 #[derive(Debug, Clone, Serialize)]
 pub struct AdminSummaryDto {
     pub users_total: i64,
@@ -20,6 +29,7 @@ pub struct AdminSummaryDto {
     pub avg_score: f64,
     pub pass_rate: f64,
     pub trend_7d: Vec<TrendPoint>,
+    pub top_scorers: Vec<TopScorerDto>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -30,6 +40,7 @@ pub struct GuruSummaryDto {
     pub avg_score: f64,
     pub pass_rate: f64,
     pub trend_7d: Vec<TrendPoint>,
+    pub top_scorers: Vec<TopScorerDto>,
 }
 
 #[derive(Debug, Clone, Serialize, FromRow)]

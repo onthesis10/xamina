@@ -1,8 +1,33 @@
 # Xamina MVP Progress Handover (Source-of-Truth)
 
-Tanggal update: 26 Maret 2026  
+Tanggal update: 02 Mei 2026  
 Baseline verifikasi: codebase aktual (`xamina-backend`, `xamina-frontend`, `docs`, `.github`)
-Update terbaru factual batch ini: lihat section `Update Sprint 15 Batch 2 Email OTP + Suspicious Login + Security Headers (26 Maret 2026)`.
+Update terbaru factual batch ini: lihat section `Update Sprint 15 Closure & Start Sprint 16 (02 Mei 2026)`.
+
+## Update Sprint 15 Closure & Start Sprint 16 (02 Mei 2026)
+
+### Selesai diverifikasi
+1. **Gate Integration Backend untuk Sprint 15 (Auth Security & Privacy) berhasil `PASS` secara penuh**:
+- `cargo test -p api --test auth_security_integration -- --ignored --nocapture --test-threads=1` -> PASS (5/5).
+- `cargo test -p api --test auth_integration --test privacy_auth_integration -- --ignored --nocapture --test-threads=1` -> PASS (7/7).
+2. **Blocker Toolchain Lokal Teratasi**:
+- `cargo clean -p api` berhasil membersihkan target build yang terkunci.
+- Build & compile tes berhasil jalan normal tanpa isu `Access is denied`.
+3. **Closure Factual Sprint 15**:
+- Karena runtime host-run OTP + verifikasi source code + automation test di seluruh integration tier sudah `PASS`, scope code development Sprint 15 (Security & Compliance) kini resmi **DONE**.
+- Task yang tersisa hanyalah task audit external murni (OWASP audit, penetration test, dependency audit formal, SSL A+ rating) yang dinaikkan ke status `BLOCKED-EXTERNAL`.
+
+### Belum selesai
+1. **Sprint 16 (Launch Preparation) belum dimulai sepenuhnya**. Sprint ini mencakup:
+- Backend: Production smoke test, Query optimization final, Redis tuning, Load test 1000 concurrent, Runbook SOP.
+- Frontend: Landing page publik, Help center, Analytics setup, Onboarding self-serve.
+- DevOps: DNS & CDN (Cloudflare), Disaster recovery test, Final monitoring tuning, GO LIVE.
+2. Lingkungan Docker masih belum pulih (Observability Mailpit tertahan karena `failed to connect to the docker API`).
+
+### Rencana berikutnya
+1. **Mulai eksekusi Sprint 16 (Launch Preparation)**.
+2. Fokus pada development frontend terlebih dahulu: Landing page publik, Help center, dan Onboarding self-serve.
+3. Rancang `XAMINA_SPRINT16_PLAN` untuk disetujui user sebelum eksekusi dimulai.
 
 ## Update Sprint 15 Batch 2 Email OTP + Suspicious Login + Security Headers (26 Maret 2026)
 

@@ -1,10 +1,10 @@
 use api::middleware::auth::Claims;
 use axum::http::Request;
 use chrono::{Duration as ChronoDuration, Utc};
-use common::{setup_test_ctx, TestCtx};
+use common::{setup_test_ctx};
 use jsonwebtoken::{encode, EncodingKey, Header};
 use serde_json::json;
-use sqlx::Row;
+// use sqlx::Row;
 use uuid::Uuid;
 
 mod common;
@@ -175,8 +175,8 @@ async fn test_superadmin_tenant_switcher_guard() {
     .await
     .expect("insert sa");
 
-    let mut sa_claims = Claims {
-        sub: sa_id,
+    let sa_claims = Claims { 
+        sub: ctx.super_admin_id,
         tenant_id: ctx.tenant_id,
         role: "super_admin".to_string(),
         exp: (Utc::now() + ChronoDuration::hours(1)).timestamp() as usize,

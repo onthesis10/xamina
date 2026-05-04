@@ -17,6 +17,8 @@ pub struct ExamInsightExamRow {
     pub exam_title: String,
     pub pass_score: i32,
     pub created_by: Uuid,
+    pub subject_id: Option<Uuid>,
+    pub class_id: Option<Uuid>,
 }
 
 #[derive(Debug, Clone, FromRow)]

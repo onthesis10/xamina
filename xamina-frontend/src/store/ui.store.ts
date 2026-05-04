@@ -20,6 +20,9 @@ interface UiState {
   themeMode: ThemeMode;
   setThemeMode: (mode: ThemeMode) => void;
   toggleThemeMode: () => void;
+  sidebarCollapsed: boolean;
+  setSidebarCollapsed: (collapsed: boolean) => void;
+  toggleSidebar: () => void;
   activeTenantId: string | null;
   setActiveTenantId: (tenantId: string | null) => void;
   installPromptState: InstallPromptState;
@@ -48,6 +51,9 @@ export const useUiStore = create<UiState>()(
                 ? "fun"
                 : "light",
         })),
+      sidebarCollapsed: false,
+      setSidebarCollapsed: (sidebarCollapsed) => set({ sidebarCollapsed }),
+      toggleSidebar: () => set((state) => ({ sidebarCollapsed: !state.sidebarCollapsed })),
       activeTenantId: null,
       setActiveTenantId: (activeTenantId) => set({ activeTenantId }),
       installPromptState: "unsupported",
@@ -70,6 +76,7 @@ export const useUiStore = create<UiState>()(
       name: "xamina-ui-storage",
       partialize: (state) => ({
         themeMode: state.themeMode,
+        sidebarCollapsed: state.sidebarCollapsed,
         activeTenantId: state.activeTenantId,
         coreTourStatus: state.coreTourStatus,
         coreTourStep: state.coreTourStep,

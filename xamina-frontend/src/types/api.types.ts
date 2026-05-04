@@ -47,6 +47,7 @@ export interface AuthUser {
     name: string;
     role: Role;
     class_id: string | null;
+    tenant_name: string;
 }
 
 export interface AuthTokenPair {
@@ -220,7 +221,7 @@ export interface CreateUserDto {
     name: string;
     role: Role;
     class_id?: string;
-    password?: string;
+    password: string;
 }
 
 export interface UpdateUserDto {
@@ -252,6 +253,107 @@ export interface UpdateClassDto {
     major?: string;
     is_active?: boolean;
 }
+
+export interface SubjectDto {
+    id: string;
+    tenant_id: string;
+    name: string;
+    is_active: boolean;
+    created_at: string;
+}
+
+export interface CreateSubjectDto {
+    name: string;
+}
+
+export interface UpdateSubjectDto {
+    name?: string;
+    is_active?: boolean;
+}
+
+export interface TeacherAssignmentDto {
+    id: string;
+    tenant_id: string;
+    teacher_id: string;
+    subject_id: string;
+    class_id: string;
+    teacher_name: string;
+    subject_name: string;
+    class_name: string;
+    created_at: string;
+}
+
+export interface CreateTeacherAssignmentDto {
+    teacher_id: string;
+    subject_id: string;
+    class_id: string;
+}
+
+export interface TeacherSubjectDto {
+    subject_id: string;
+    subject_name: string;
+}
+
+export interface TeacherSubjectClassDto {
+    class_id: string;
+    class_name: string;
+}
+
+export interface StudentProfileDto {
+    id: string;
+    user_id: string;
+    nisn: string | null;
+    created_at: string;
+}
+
+export interface UpsertStudentProfileDto {
+    nisn: string | null;
+}
+
+export interface StudentClassHistoryDto {
+    id: string;
+    tenant_id: string;
+    student_id: string;
+    class_id: string;
+    class_name: string;
+    academic_year: string;
+    is_active: boolean;
+    created_at: string;
+}
+
+export interface AssignClassDto {
+    class_id: string;
+    academic_year: string;
+}
+
+export interface PromoteStudentsDto {
+    student_ids: string[];
+    new_class_id: string;
+    new_academic_year: string;
+}
+
+export interface PromoteResult {
+    promoted_count: number;
+    errors: Array<{
+        student_id: string;
+        reason: string;
+    }>;
+}
+
+export interface GenerateBulkUsersDto {
+    count: number;
+    role: Role;
+    name_prefix: string;
+    password: string;
+    class_id?: string;
+    academic_year?: string;
+}
+
+export interface GenerateBulkUsersResult {
+    csv_url: string;
+    generated_count: number;
+}
+
 
 export interface CsvImportResult {
     inserted: number;
@@ -348,6 +450,10 @@ export interface ExamDto {
     shuffle_options: boolean;
     start_at: string | null;
     end_at: string | null;
+    subject_id: string | null;
+    class_id: string | null;
+    subject_name?: string;
+    class_name?: string;
 }
 
 export interface CreateExamDto {
@@ -359,6 +465,8 @@ export interface CreateExamDto {
     shuffle_options?: boolean;
     start_at?: string;
     end_at?: string;
+    subject_id?: string | null;
+    class_id?: string | null;
 }
 
 export interface UpdateExamDto extends CreateExamDto {}
@@ -498,6 +606,14 @@ export interface TrendPointDto {
     pass_rate: number;
 }
 
+export interface TopScorerDto {
+    student_id: string;
+    student_name: string;
+    exam_title: string;
+    score: number;
+    finished_at: string | null;
+}
+
 export interface DashboardAdminSummaryDto {
     role: "admin";
     users_total: number;
@@ -507,6 +623,7 @@ export interface DashboardAdminSummaryDto {
     avg_score: number;
     pass_rate: number;
     trend_7d: TrendPointDto[];
+    top_scorers: TopScorerDto[];
 }
 
 export interface DashboardGuruSummaryDto {
@@ -517,6 +634,7 @@ export interface DashboardGuruSummaryDto {
     avg_score: number;
     pass_rate: number;
     trend_7d: TrendPointDto[];
+    top_scorers: TopScorerDto[];
 }
 
 export interface StudentRecentResultDto {

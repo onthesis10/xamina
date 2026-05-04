@@ -51,12 +51,15 @@ impl ExamRepository {
         offset: i64,
     ) -> Result<Vec<ExamDto>, CoreError> {
         sqlx::query_as::<_, ExamDto>(
-            "SELECT id, tenant_id, created_by, title, description, duration_minutes, pass_score, status, shuffle_questions, shuffle_options, start_at, end_at
-             FROM exams
-             WHERE tenant_id = $1
-               AND ($2::text IS NULL OR status = $2)
-               AND ($3::text IS NULL OR title ILIKE '%' || $3 || '%')
-             ORDER BY created_at DESC
+            "SELECT e.id, e.tenant_id, e.created_by, e.title, e.description, e.duration_minutes, e.pass_score, e.status, e.shuffle_questions, e.shuffle_options, e.start_at, e.end_at, e.subject_id, e.class_id,
+                    s.name AS subject_name, c.name AS class_name
+             FROM exams e
+             LEFT JOIN subjects s ON s.id = e.subject_id
+             LEFT JOIN classes c ON c.id = e.class_id
+             WHERE e.tenant_id = $1
+               AND ($2::text IS NULL OR e.status = $2)
+               AND ($3::text IS NULL OR e.title ILIKE '%' || $3 || '%')
+             ORDER BY e.created_at DESC
              LIMIT $4 OFFSET $5",
         )
         .bind(tenant_id)
@@ -77,10 +80,17 @@ impl ExamRepository {
         pass_score: i32,
     ) -> Result<ExamDto, CoreError> {
         sqlx::query_as::<_, ExamDto>(
-            "INSERT INTO exams
-             (tenant_id, created_by, title, description, duration_minutes, pass_score, status, shuffle_questions, shuffle_options, start_at, end_at)
-             VALUES ($1, $2, $3, $4, $5, $6, 'draft', $7, $8, $9, $10)
-             RETURNING id, tenant_id, created_by, title, description, duration_minutes, pass_score, status, shuffle_questions, shuffle_options, start_at, end_at",
+            "WITH inserted AS (
+                INSERT INTO exams
+                (tenant_id, created_by, title, description, duration_minutes, pass_score, status, shuffle_questions, shuffle_options, start_at, end_at, subject_id, class_id)
+                VALUES ($1, $2, $3, $4, $5, $6, 'draft', $7, $8, $9, $10, $11, $12)
+                RETURNING *
+             )
+             SELECT i.id, i.tenant_id, i.created_by, i.title, i.description, i.duration_minutes, i.pass_score, i.status, i.shuffle_questions, i.shuffle_options, i.start_at, i.end_at, i.subject_id, i.class_id,
+                    s.name AS subject_name, c.name AS class_name
+             FROM inserted i
+             LEFT JOIN subjects s ON s.id = i.subject_id
+             LEFT JOIN classes c ON c.id = i.class_id",
         )
         .bind(tenant_id)
         .bind(user_id)
@@ -92,6 +102,8 @@ impl ExamRepository {
         .bind(body.shuffle_options.unwrap_or(false))
         .bind(body.start_at)
         .bind(body.end_at)
+        .bind(body.subject_id)
+        .bind(body.class_id)
         .fetch_one(&self.pool)
         .await
         .map_err(|e| {
@@ -106,8 +118,12 @@ impl ExamRepository {
         exam_id: Uuid,
     ) -> Result<Option<ExamDto>, CoreError> {
         sqlx::query_as::<_, ExamDto>(
-            "SELECT id, tenant_id, created_by, title, description, duration_minutes, pass_score, status, shuffle_questions, shuffle_options, start_at, end_at
-             FROM exams WHERE id = $1 AND tenant_id = $2",
+            "SELECT e.id, e.tenant_id, e.created_by, e.title, e.description, e.duration_minutes, e.pass_score, e.status, e.shuffle_questions, e.shuffle_options, e.start_at, e.end_at, e.subject_id, e.class_id,
+                    s.name AS subject_name, c.name AS class_name
+             FROM exams e
+             LEFT JOIN subjects s ON s.id = e.subject_id
+             LEFT JOIN classes c ON c.id = e.class_id
+             WHERE e.id = $1 AND e.tenant_id = $2",
         )
         .bind(exam_id)
         .bind(tenant_id)
@@ -136,10 +152,17 @@ impl ExamRepository {
         body: &ExamPayload,
     ) -> Result<Option<ExamDto>, CoreError> {
         sqlx::query_as::<_, ExamDto>(
-            "UPDATE exams
-             SET title = $1, description = $2, duration_minutes = $3, pass_score = $4, shuffle_questions = $5, shuffle_options = $6, start_at = $7, end_at = $8, updated_at = NOW()
-             WHERE id = $9 AND tenant_id = $10 AND status = 'draft'
-             RETURNING id, tenant_id, created_by, title, description, duration_minutes, pass_score, status, shuffle_questions, shuffle_options, start_at, end_at",
+            "WITH updated AS (
+                UPDATE exams
+                SET title = $1, description = $2, duration_minutes = $3, pass_score = $4, shuffle_questions = $5, shuffle_options = $6, start_at = $7, end_at = $8, subject_id = $9, class_id = $10, updated_at = NOW()
+                WHERE id = $11 AND tenant_id = $12 AND status = 'draft'
+                RETURNING *
+             )
+             SELECT u.id, u.tenant_id, u.created_by, u.title, u.description, u.duration_minutes, u.pass_score, u.status, u.shuffle_questions, u.shuffle_options, u.start_at, u.end_at, u.subject_id, u.class_id,
+                    s.name AS subject_name, c.name AS class_name
+             FROM updated u
+             LEFT JOIN subjects s ON s.id = u.subject_id
+             LEFT JOIN classes c ON c.id = u.class_id",
         )
         .bind(body.title.clone())
         .bind(body.description.clone())
@@ -149,6 +172,8 @@ impl ExamRepository {
         .bind(body.shuffle_options.unwrap_or(false))
         .bind(body.start_at)
         .bind(body.end_at)
+        .bind(body.subject_id)
+        .bind(body.class_id)
         .bind(exam_id)
         .bind(tenant_id)
         .fetch_optional(&self.pool)
@@ -332,28 +357,36 @@ impl ExamRepository {
         &self,
         tenant_id: Uuid,
         exam_id: Uuid,
-        exam_creator: Uuid,
+        class_id: Option<Uuid>,
         start: DateTime<Utc>,
         end: DateTime<Utc>,
     ) -> Result<Vec<PublishConflictExam>, CoreError> {
+        // Conflict only when schedules overlap AND there is class overlap:
+        //   - same class_id, OR
+        //   - either side is NULL (global exam) which broadcasts to all classes
+        // Different-class exams may share the same time window without conflict.
         sqlx::query_as::<_, PublishConflictExam>(
             "SELECT id, title, start_at, end_at
              FROM exams
              WHERE tenant_id = $1
-               AND created_by = $2
-               AND id <> $3
+               AND id <> $2
                AND status = 'published'
                AND start_at IS NOT NULL
                AND end_at IS NOT NULL
-               AND tstzrange(start_at, end_at, '[)') && tstzrange($4, $5, '[)')
+               AND tstzrange(start_at, end_at, '[)') && tstzrange($3, $4, '[)')
+               AND (
+                   $5::uuid IS NULL
+                   OR class_id IS NULL
+                   OR class_id = $5
+               )
              ORDER BY start_at ASC
              LIMIT 5",
         )
         .bind(tenant_id)
-        .bind(exam_creator)
         .bind(exam_id)
         .bind(start)
         .bind(end)
+        .bind(class_id)
         .fetch_all(&self.pool)
         .await
         .map_err(|_| CoreError::internal("DB_ERROR", "Failed schedule conflict check"))

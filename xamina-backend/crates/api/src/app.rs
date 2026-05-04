@@ -1,4 +1,5 @@
 use std::{path::PathBuf, sync::Arc};
+use uuid::Uuid;
 
 use axum::{
     extract::Request,
@@ -19,7 +20,7 @@ use crate::services::AppServices;
 use crate::ws_state::WsState;
 use crate::{
     ai_metrics,
-    config::BillingConfig,
+    config::{BillingConfig, StorageConfig},
     middleware::{
         ai_rate_limit::AiRateLimitProfile, metrics::build_metrics_layer,
         rate_limit::GlobalRateLimitProfile, tenant_context::apply_tenant_context,
@@ -32,6 +33,7 @@ use xamina_core::error::{CoreError, CoreErrorKind};
 pub struct AppState {
     pub pool: PgPool,
     pub redis: redis::Client,
+    pub s3_client: aws_sdk_s3::Client,
     pub started_at: chrono::DateTime<chrono::Utc>,
     pub jwt_secret: String,
     pub access_ttl_minutes: i64,
@@ -43,6 +45,7 @@ pub struct AppState {
     pub import_max_bytes: usize,
     pub import_max_rows: usize,
     pub billing: BillingConfig,
+    pub storage: StorageConfig,
 }
 
 pub type SharedState = Arc<AppState>;
@@ -53,6 +56,8 @@ pub struct ApiError {
     pub code: &'static str,
     pub message: String,
     pub details: serde_json::Value,
+    pub trace_id: String,
+    pub timestamp: i64,
 }
 
 impl ApiError {
@@ -62,6 +67,8 @@ impl ApiError {
             code,
             message: message.into(),
             details: serde_json::Value::Null,
+            trace_id: Uuid::new_v4().to_string(),
+            timestamp: chrono::Utc::now().timestamp(),
         }
     }
 
@@ -85,12 +92,30 @@ impl From<CoreError> for ApiError {
             code: value.code,
             message: value.message,
             details: value.details,
+            trace_id: Uuid::new_v4().to_string(),
+            timestamp: chrono::Utc::now().timestamp(),
         }
     }
 }
 
 impl IntoResponse for ApiError {
     fn into_response(self) -> axum::response::Response {
+        if self.status.is_server_error() {
+            tracing::error!(
+                code = self.code,
+                message = %self.message,
+                details = ?self.details,
+                trace_id = %self.trace_id,
+                "API Error"
+            );
+        } else {
+            tracing::warn!(
+                code = self.code,
+                message = %self.message,
+                trace_id = %self.trace_id,
+                "API Warning"
+            );
+        }
         (
             self.status,
             Json(json!({
@@ -99,7 +124,9 @@ impl IntoResponse for ApiError {
                     "code": self.code,
                     "message": self.message,
                     "details": self.details,
-                }
+                },
+                "trace_id": self.trace_id,
+                "timestamp": self.timestamp,
             })),
         )
             .into_response()

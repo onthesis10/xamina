@@ -277,7 +277,7 @@ impl ExamService {
         if let (Some(start), Some(end)) = (exam.start_at, exam.end_at) {
             let conflicts = self
                 .repo
-                .list_publish_conflicts(tenant_id, exam.id, exam.created_by, start, end)
+                .list_publish_conflicts(tenant_id, exam.id, exam.class_id, start, end)
                 .await?;
             if !conflicts.is_empty() {
                 let sample_titles = conflicts
@@ -395,6 +395,8 @@ mod tests {
             shuffle_options: Some(false),
             start_at: Some(now),
             end_at: Some(now - Duration::minutes(1)),
+            subject_id: None,
+            class_id: None,
         };
 
         let err = service
@@ -416,6 +418,8 @@ mod tests {
             shuffle_options: Some(false),
             start_at: Some(Utc::now()),
             end_at: None,
+            subject_id: None,
+            class_id: None,
         };
 
         let err = service

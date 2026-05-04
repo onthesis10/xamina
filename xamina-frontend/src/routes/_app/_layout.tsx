@@ -5,6 +5,7 @@ import { ToastViewport } from "@/components/ToastViewport";
 import { Topbar } from "@/components/Topbar";
 import { TenantErrorBoundary } from "@/components/TenantErrorBoundary";
 import { useAuthStore } from "@/store/auth.store";
+import { useUiStore } from "@/store/ui.store";
 
 export function appBeforeLoad() {
   const user = useAuthStore.getState().user;
@@ -12,8 +13,9 @@ export function appBeforeLoad() {
 }
 
 export function AppLayoutPage() {
+  const sidebarCollapsed = useUiStore((s) => s.sidebarCollapsed);
   return (
-    <div className="app-shell">
+    <div className="app-shell" data-sidebar-collapsed={sidebarCollapsed || undefined}>
       <Sidebar />
       <main className="app-main">
         <Topbar />

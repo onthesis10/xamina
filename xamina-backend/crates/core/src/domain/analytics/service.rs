@@ -59,6 +59,7 @@ impl AnalyticsService {
                     pass_rate,
                 ) = self.repo.admin_totals(tenant_id).await?;
                 let trend_7d = self.repo.trend_admin(tenant_id).await?;
+                let top_scorers = self.repo.top_scorers_admin(tenant_id).await?;
                 Ok(DashboardSummaryDto::Admin(AdminSummaryDto {
                     users_total,
                     classes_total,
@@ -67,12 +68,14 @@ impl AnalyticsService {
                     avg_score,
                     pass_rate,
                     trend_7d,
+                    top_scorers,
                 }))
             }
             "guru" => {
                 let (exams_total, published_exams_total, submissions_total, avg_score, pass_rate) =
                     self.repo.guru_totals(tenant_id, actor_id).await?;
                 let trend_7d = self.repo.trend_guru(tenant_id, actor_id).await?;
+                let top_scorers = self.repo.top_scorers_guru(tenant_id, actor_id).await?;
                 Ok(DashboardSummaryDto::Guru(GuruSummaryDto {
                     exams_total,
                     published_exams_total,
@@ -80,6 +83,7 @@ impl AnalyticsService {
                     avg_score,
                     pass_rate,
                     trend_7d,
+                    top_scorers,
                 }))
             }
             "siswa" => {
@@ -170,10 +174,25 @@ impl AnalyticsService {
             .ok_or_else(|| CoreError::not_found("NOT_FOUND", "Exam not found"))?;
 
         if actor_role == "guru" && exam.created_by != actor_id {
-            return Err(CoreError::forbidden(
-                "FORBIDDEN",
-                "Guru can only access own exam insights",
-            ));
+            let is_assigned = sqlx::query_scalar::<_, bool>(
+                "SELECT EXISTS (
+                    SELECT 1 FROM teacher_assignments 
+                    WHERE teacher_id = $1 AND subject_id = $2 AND class_id = $3
+                )",
+            )
+            .bind(actor_id)
+            .bind(exam.subject_id)
+            .bind(exam.class_id)
+            .fetch_one(&self.repo.pool)
+            .await
+            .unwrap_or(false);
+
+            if !is_assigned {
+                return Err(CoreError::forbidden(
+                    "FORBIDDEN",
+                    "Guru can only access own exam insights or assigned subject/class",
+                ));
+            }
         }
 
         let submissions = self

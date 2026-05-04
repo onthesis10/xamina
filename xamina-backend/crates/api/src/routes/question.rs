@@ -61,6 +61,8 @@ pub fn routes() -> Router<SharedState> {
                 .delete(delete_question),
         )
         .route("/uploads/question-image", post(upload_question_image))
+        .route("/uploads/presign", post(request_presign))
+        .route("/uploads/confirm", post(confirm_upload))
 }
 
 #[derive(Debug, Deserialize)]
@@ -93,6 +95,10 @@ struct QuestionDto {
     difficulty: Option<String>,
     image_url: Option<String>,
     is_active: bool,
+    media_urls: Option<serde_json::Value>,
+    status: Option<String>,
+    tags: Option<Vec<String>>,
+    ai_metadata: Option<serde_json::Value>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -105,6 +111,10 @@ struct QuestionPayload {
     difficulty: Option<String>,
     image_url: Option<String>,
     is_active: Option<bool>,
+    media_urls: Option<serde_json::Value>,
+    status: Option<String>,
+    tags: Option<Vec<String>>,
+    ai_metadata: Option<serde_json::Value>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -161,6 +171,32 @@ struct QuestionImportCommitPayload {
 struct QuestionImportCommitResult {
     inserted_count: usize,
     question_ids: Vec<Uuid>,
+}
+
+#[derive(Debug, Deserialize)]
+struct PresignRequest {
+    file_name: String,
+    content_type: String,
+    file_size: usize,
+}
+
+#[derive(Debug, Serialize)]
+struct PresignResponse {
+    upload_url: String,
+    object_key: String,
+    public_url: String,
+    expires_in: u64,
+}
+
+#[derive(Debug, Deserialize)]
+struct ConfirmUploadRequest {
+    object_key: String,
+}
+
+#[derive(Debug, Serialize)]
+struct ConfirmUploadResponse {
+    public_url: String,
+    confirmed: bool,
 }
 
 fn ensure_teacher_or_admin(auth: &AuthUser) -> Result<(), ApiError> {
@@ -707,6 +743,10 @@ fn question_payload_from_mapping(
                 difficulty,
                 image_url,
                 is_active,
+                media_urls: None,
+                status: Some("published".to_string()),
+                tags: Some(vec![]),
+                ai_metadata: None,
             }
         }
         "true_false" => QuestionPayload {
@@ -721,6 +761,10 @@ fn question_payload_from_mapping(
             difficulty,
             image_url,
             is_active,
+            media_urls: None,
+            status: Some("published".to_string()),
+            tags: Some(vec![]),
+            ai_metadata: None,
         },
         "short_answer" => {
             let answer = required_field(mapping, "answer_key")?;
@@ -743,6 +787,10 @@ fn question_payload_from_mapping(
                 difficulty,
                 image_url,
                 is_active,
+                media_urls: None,
+                status: Some("published".to_string()),
+                tags: Some(vec![]),
+                ai_metadata: None,
             }
         }
         _ => {
@@ -1138,7 +1186,7 @@ async fn list_questions(
     })?;
 
     let rows = sqlx::query_as::<_, QuestionDto>(
-        "SELECT id, tenant_id, created_by, type, content, options_jsonb, answer_key, topic, difficulty, image_url, is_active
+        "SELECT id, tenant_id, created_by, type, content, options_jsonb, answer_key, topic, difficulty, image_url, is_active, media_urls, status, tags, ai_metadata
          FROM questions
          WHERE tenant_id = $1
            AND ($2::text IS NULL OR content ILIKE '%' || $2 || '%')
@@ -1180,9 +1228,9 @@ async fn create_question(
 
     let row = sqlx::query_as::<_, QuestionDto>(
         "INSERT INTO questions
-         (tenant_id, created_by, type, content, options_jsonb, answer_key, topic, difficulty, image_url, is_active)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-         RETURNING id, tenant_id, created_by, type, content, options_jsonb, answer_key, topic, difficulty, image_url, is_active",
+         (tenant_id, created_by, type, content, options_jsonb, answer_key, topic, difficulty, image_url, is_active, media_urls, status, tags, ai_metadata)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+         RETURNING id, tenant_id, created_by, type, content, options_jsonb, answer_key, topic, difficulty, image_url, is_active, media_urls, status, tags, ai_metadata",
     )
     .bind(auth.0.tenant_id)
     .bind(auth.0.sub)
@@ -1194,6 +1242,10 @@ async fn create_question(
     .bind(body.difficulty)
     .bind(body.image_url)
     .bind(body.is_active.unwrap_or(true))
+    .bind(body.media_urls.unwrap_or_else(|| json!([])))
+    .bind(body.status.unwrap_or_else(|| "published".to_string()))
+    .bind(body.tags.unwrap_or_default())
+    .bind(body.ai_metadata)
     .fetch_one(&state.pool)
     .await
     .map_err(|e| {
@@ -1215,7 +1267,7 @@ async fn get_question(
     ensure_teacher_or_admin(&auth)?;
 
     let row = sqlx::query_as::<_, QuestionDto>(
-        "SELECT id, tenant_id, created_by, type, content, options_jsonb, answer_key, topic, difficulty, image_url, is_active
+        "SELECT id, tenant_id, created_by, type, content, options_jsonb, answer_key, topic, difficulty, image_url, is_active, media_urls, status, tags, ai_metadata
          FROM questions WHERE id = $1 AND tenant_id = $2",
     )
     .bind(id)
@@ -1242,9 +1294,9 @@ async fn update_question(
 
     let row = sqlx::query_as::<_, QuestionDto>(
         "UPDATE questions
-         SET type = $1, content = $2, options_jsonb = $3, answer_key = $4, topic = $5, difficulty = $6, image_url = $7, is_active = $8, updated_at = NOW()
-         WHERE id = $9 AND tenant_id = $10
-         RETURNING id, tenant_id, created_by, type, content, options_jsonb, answer_key, topic, difficulty, image_url, is_active",
+         SET type = $1, content = $2, options_jsonb = $3, answer_key = $4, topic = $5, difficulty = $6, image_url = $7, is_active = $8, media_urls = $9, status = $10, tags = $11, ai_metadata = $12, updated_at = NOW()
+         WHERE id = $13 AND tenant_id = $14
+         RETURNING id, tenant_id, created_by, type, content, options_jsonb, answer_key, topic, difficulty, image_url, is_active, media_urls, status, tags, ai_metadata",
     )
     .bind(body.r#type)
     .bind(body.content)
@@ -1254,6 +1306,10 @@ async fn update_question(
     .bind(body.difficulty)
     .bind(body.image_url)
     .bind(body.is_active.unwrap_or(true))
+    .bind(body.media_urls.unwrap_or_else(|| json!([])))
+    .bind(body.status.unwrap_or_else(|| "published".to_string()))
+    .bind(body.tags.unwrap_or_default())
+    .bind(body.ai_metadata)
     .bind(id)
     .bind(auth.0.tenant_id)
     .fetch_optional(&state.pool)
@@ -1450,6 +1506,67 @@ async fn upload_question_image(
     Ok(Json(SuccessResponse {
         success: true,
         data: UploadImageResult { image_url },
+    }))
+}
+
+async fn request_presign(
+    State(state): State<SharedState>,
+    auth: AuthUser,
+    Json(body): Json<PresignRequest>,
+) -> ApiResult<SuccessResponse<PresignResponse>> {
+    ensure_teacher_or_admin(&auth)?;
+
+    if body.file_size > upload_max_bytes() {
+        return Err(ApiError::new(
+            StatusCode::BAD_REQUEST,
+            "VALIDATION_ERROR",
+            "File exceeds maximum size",
+        ));
+    }
+
+    let ext = body.file_name.split('.').next_back().unwrap_or("bin");
+    let timestamp = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis();
+    let object_key = format!("{}/presigned-{}-{}.{}", auth.0.tenant_id, timestamp, Uuid::new_v4(), ext);
+
+    let expires_in = std::time::Duration::from_secs(900);
+    
+    let presigned_request = state.s3_client
+        .put_object()
+        .bucket(&state.storage.bucket)
+        .key(&object_key)
+        .content_type(&body.content_type)
+        .presigned(aws_sdk_s3::presigning::PresigningConfig::expires_in(expires_in).unwrap())
+        .await
+        .map_err(|_| ApiError::new(StatusCode::INTERNAL_SERVER_ERROR, "PRESIGN_FAILED", "Failed to generate presigned URL"))?;
+
+    let public_url = format!("{}/{}", state.storage.public_url.trim_end_matches('/'), object_key);
+
+    Ok(Json(SuccessResponse {
+        success: true,
+        data: PresignResponse {
+            upload_url: presigned_request.uri().to_string(),
+            object_key,
+            public_url,
+            expires_in: 900,
+        },
+    }))
+}
+
+async fn confirm_upload(
+    State(state): State<SharedState>,
+    auth: AuthUser,
+    Json(body): Json<ConfirmUploadRequest>,
+) -> ApiResult<SuccessResponse<ConfirmUploadResponse>> {
+    ensure_teacher_or_admin(&auth)?;
+
+    let public_url = format!("{}/{}", state.storage.public_url.trim_end_matches('/'), body.object_key);
+
+    Ok(Json(SuccessResponse {
+        success: true,
+        data: ConfirmUploadResponse {
+            public_url,
+            confirmed: true,
+        },
     }))
 }
 
